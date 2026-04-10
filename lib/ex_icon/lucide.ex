@@ -1,6 +1,8 @@
 defmodule ExIcon.Lucide do
   @moduledoc """
   ExIcon provider for Lucide icons.
+
+  https://lucide.dev
   """
 
   @behaviour ExIcon.Provider
