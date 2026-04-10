@@ -1,6 +1,6 @@
 defmodule <%= inspect(@module_name) %> do
   @moduledoc """
-  Provides function components for Lucide icons.
+  Provides function components for icons.
 
   This file is generated. Do not edit.
   """
