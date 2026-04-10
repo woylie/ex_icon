@@ -235,7 +235,7 @@ defmodule ExIcon do
     provider_name = provider_name(provider)
 
     tmp_dir = Path.join([tmp_dir, provider_name, version])
-    tmp_svg_dir = Path.join(tmp_dir, provider.svg_folder())
+    tmp_svg_dir = Path.join(tmp_dir, provider.svg_folder(version))
 
     clear_folder!(tmp_dir)
 
