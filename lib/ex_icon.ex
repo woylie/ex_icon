@@ -7,7 +7,6 @@ defmodule ExIcon do
   """
 
   @default_config_path ".ex_icon.exs"
-  @default_ignore_attrs ["xmlns", "viewbox", "width", "height"]
 
   @options_schema [
     icons: [
@@ -42,14 +41,13 @@ defmodule ExIcon do
       doc:
         "The name of the generated module. Example: `MyApp.Components.Lucide`."
     ],
-    ignore_attrs: [
-      type: {:or, [{:list, :string}, {:in, [:all]}]},
+    attrs: [
+      type: {:list, :string},
       required: false,
-      default: @default_ignore_attrs,
+      default: [],
       doc: """
-      ExIcon substitutes all attributes of the `<svg>` element with HEEx
-      variables and adds the corresponding attributes to the HEEx
-      components. Attributes in this list are not substituted.
+      ExIcon substitutes all listed attributes of the `<svg>` element with HEEx
+      variables and adds the corresponding attributes to the HEEx components.
       """
     ]
   ]
@@ -67,8 +65,9 @@ defmodule ExIcon do
   Takes an SVG as a string, extracts the attributes, and replaces the
   attributes with HEEx variables.
 
-  The second argument is a list of attributes to ignore. It must be a list of
-  lowercase strings.
+  The second argument is a list of attributes to turn into component attributes.
+  It must be a list of lowercase strings. Attributes not present in the original
+  SVG file are ignored.
 
   The function returns a tuple with the updated SVG string as the first element
   and a list of substituted attributes with their values as a second element.
@@ -91,23 +90,44 @@ defmodule ExIcon do
       ...>  \"\"\"
       iex> ExIcon.transform_svg(svg)
       {\"\"\"
+       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+         <path d="m12 19-7-7 7-7" />
+         <path d="M19 12H5" />
+       </svg>\\
+       \"\"\", []}
+
+      iex> svg = \"\"\"
+      ...>  <svg
+      ...>    xmlns="http://www.w3.org/2000/svg"
+      ...>    width="24"
+      ...>    height="24"
+      ...>    viewBox="0 0 24 24"
+      ...>    stroke="currentColor"
+      ...>    stroke-width="2"
+      ...>  >
+      ...>    <path d="m12 19-7-7 7-7" />
+      ...>    <path d="M19 12H5" />
+      ...>  </svg>
+      ...>  \"\"\"
+      iex> ExIcon.transform_svg(svg, ["stroke", "stroke-width"])
+      {\"\"\"
        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke={@stroke} stroke-width={@stroke_width}>
          <path d="m12 19-7-7 7-7" />
          <path d="M19 12H5" />
        </svg>\\
        \"\"\", [{"stroke", "currentColor"}, {"stroke_width", "2"}]}
   """
-  @spec transform_svg(svg, ignore_attrs) :: {svg, attrs}
-        when svg: binary, ignore_attrs: [binary], attrs: [{binary, binary}]
-  def transform_svg(svg, ignore_attrs \\ @default_ignore_attrs)
-      when is_binary(svg) and is_list(ignore_attrs) do
+  @spec transform_svg(svg, attrs) :: {svg, attrs}
+        when svg: binary, attrs: [binary], attrs: [{binary, binary}]
+  def transform_svg(svg, substitute_attrs \\ [])
+      when is_binary(svg) and is_list(substitute_attrs) do
     case extract_svg(svg) do
       {:ok, {attrs, inner}} ->
-        svg_attrs = build_attrs(attrs, ignore_attrs)
+        svg_attrs = build_attrs(attrs, substitute_attrs)
 
         substituted_attrs =
           attrs
-          |> Enum.reject(fn {k, _} -> ignore_attr?(k, ignore_attrs) end)
+          |> Enum.filter(fn {k, _} -> substitute_attr?(k, substitute_attrs) end)
           |> Enum.map(fn {k, v} -> {to_snake_case(k), v} end)
 
         svg = "<svg #{svg_attrs}>#{inner}</svg>"
@@ -118,16 +138,22 @@ defmodule ExIcon do
     end
   end
 
-  defp ignore_attr?(attr, ignore_attrs) do
-    String.downcase(attr) in ignore_attrs
+  defp substitute_attr?(attr, substitute_attrs) do
+    String.downcase(attr) in substitute_attrs
   end
 
-  defp build_attrs(attrs, ignore_attrs) do
+  defp build_attrs(attrs, []) do
     Enum.map_join(attrs, " ", fn {k, v} ->
-      if ignore_attr?(k, ignore_attrs) do
-        ~s(#{k}="#{v}")
-      else
+      ~s(#{k}="#{v}")
+    end)
+  end
+
+  defp build_attrs(attrs, substitute_attrs) do
+    Enum.map_join(attrs, " ", fn {k, v} ->
+      if substitute_attr?(k, substitute_attrs) do
         "#{k}={@#{to_snake_case(k)}}"
+      else
+        ~s(#{k}="#{v}")
       end
     end)
   end
@@ -150,7 +176,7 @@ defmodule ExIcon do
   @doc false
   def prepare_assigns(path, opts) do
     module_name = Keyword.fetch!(opts, :module_name)
-    ignore_attrs = Keyword.get(opts, :ignore_attrs, default_ignore_attrs())
+    substitute_attrs = Keyword.get(opts, :attrs, [])
 
     icon_names =
       case Keyword.fetch!(opts, :icons) do
@@ -162,7 +188,7 @@ defmodule ExIcon do
       icon_names
       |> Enum.map(fn icon_name ->
         if svg = read_icon(path, icon_name) do
-          {to_snake_case(icon_name), transform_svg(svg, ignore_attrs)}
+          {to_snake_case(icon_name), transform_svg(svg, substitute_attrs)}
         end
       end)
       |> Enum.reject(&is_nil/1)
@@ -256,14 +282,6 @@ defmodule ExIcon do
   defp clear_folder!(path) do
     File.rm_rf!(path)
     File.mkdir_p!(path)
-  end
-
-  @doc """
-  Returns the list of default ignore attributes for `ExIcon.transform_svg/1`.
-  """
-  @spec default_ignore_attrs() :: [String.t()]
-  def default_ignore_attrs do
-    @default_ignore_attrs
   end
 
   @doc false

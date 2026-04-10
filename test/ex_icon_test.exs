@@ -14,7 +14,8 @@ defmodule ExIconTest do
         provider: ExIcon.Lucide,
         version: "1.8.0",
         module_path: module_path,
-        module_name: MyAppWeb.Components.Lucide
+        module_name: MyAppWeb.Components.Lucide,
+        attrs: ["stroke", "stroke-width"]
       ]
 
       svg = """
@@ -156,7 +157,7 @@ defmodule ExIconTest do
       </svg>
       """
 
-      assert ExIcon.transform_svg(svg) ==
+      assert ExIcon.transform_svg(svg, ["stroke", "stroke-width"]) ==
                {"""
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke={@stroke} stroke-width={@stroke_width}>
                   <path d="m12 19-7-7 7-7" />
@@ -166,19 +167,22 @@ defmodule ExIconTest do
     end
 
     test "replaces attributes with HEEx variables (with line breaks)" do
-      assert ExIcon.transform_svg("""
-             <svg
-               xmlns="http://www.w3.org/2000/svg"
-               width="24"
-               height="24"
-               viewBox="0 0 24 24"
-               stroke="currentColor"
-               stroke-width="2"
-             >
-               <path d="m12 19-7-7 7-7" />
-               <path d="M19 12H5" />
-             </svg>
-             """) ==
+      assert ExIcon.transform_svg(
+               """
+               <svg
+                 xmlns="http://www.w3.org/2000/svg"
+                 width="24"
+                 height="24"
+                 viewBox="0 0 24 24"
+                 stroke="currentColor"
+                 stroke-width="2"
+               >
+                 <path d="m12 19-7-7 7-7" />
+                 <path d="M19 12H5" />
+               </svg>
+               """,
+               ["stroke", "stroke-width"]
+             ) ==
                {"""
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke={@stroke} stroke-width={@stroke_width}>
                   <path d="m12 19-7-7 7-7" />
@@ -187,30 +191,7 @@ defmodule ExIconTest do
                 """, [{"stroke", "currentColor"}, {"stroke_width", "2"}]}
     end
 
-    test "does not replace ignore attributes" do
-      svg = """
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path d="m12 19-7-7 7-7" />
-        <path d="M19 12H5" />
-      </svg>
-      """
-
-      assert ExIcon.transform_svg(svg, [
-               "xmlns",
-               "width",
-               "height",
-               "viewbox",
-               "stroke-width"
-             ]) ==
-               {"""
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke={@stroke} stroke-width="2">
-                  <path d="m12 19-7-7 7-7" />
-                  <path d="M19 12H5" />
-                </svg>\
-                """, [{"stroke", "currentColor"}]}
-    end
-
-    test "ignore attributes are case-insensitive" do
+    test "attributes are case-insensitive" do
       svg = """
       <svg xmlNS="http://www.w3.org/2000/svg" WIDTH="24" heiGHt="24" viewbox="0 0 24 24" Stroke="currentColor" Stroke-Width="2">
         <path d="m12 19-7-7 7-7" />
@@ -218,13 +199,7 @@ defmodule ExIconTest do
       </svg>
       """
 
-      assert ExIcon.transform_svg(svg, [
-               "xmlns",
-               "width",
-               "height",
-               "viewbox",
-               "stroke-width"
-             ]) ==
+      assert ExIcon.transform_svg(svg, ["stroke"]) ==
                {"""
                 <svg xmlNS="http://www.w3.org/2000/svg" WIDTH="24" heiGHt="24" viewbox="0 0 24 24" Stroke={@stroke} Stroke-Width="2">
                   <path d="m12 19-7-7 7-7" />
@@ -261,7 +236,7 @@ defmodule ExIconTest do
           version: "1.8.0",
           module_path: "lib/my_app_web/components/lucide.ex",
           module_name: MyAppWeb.Components.Lucide,
-          ignore_attrs: ["viewbox"]
+          attrs: ["stroke"]
         ]
       ]
 
