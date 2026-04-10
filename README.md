@@ -1,5 +1,7 @@
 # ExIcon
 
+[![CI](https://github.com/woylie/ex_icon/workflows/CI/badge.svg)](https://github.com/woylie/ex_icon/actions) [![Hex](https://img.shields.io/hexpm/v/ex_icon)](https://hex.pm/packages/ex_icon) [![Hex Docs](https://img.shields.io/badge/hex-docs-green)](https://hexdocs.pm/ex_icon/readme.html) [![Coverage Status](https://coveralls.io/repos/github/woylie/ex_icon/badge.svg)](https://coveralls.io/github/woylie/ex_icon)
+
 Generic icon library for Phoenix LiveView.
 
 - Downloads icon sets and generates Phoenix LiveView function components.
