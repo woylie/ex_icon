@@ -2,7 +2,7 @@ defmodule ExIcon.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/woylie/ex_icon"
-  @version "0.1.0"
+  @version "0.1.1"
 
   def project do
     [
@@ -71,7 +71,7 @@ defmodule ExIcon.MixProject do
         "Changelog" => @source_url <> "/blob/main/CHANGELOG.md",
         "Sponsor" => "https://github.com/sponsors/woylie"
       },
-      files: ~w(lib mix.exs README* LICENSE* CHANGELOG*)
+      files: ~w(lib priv mix.exs README* LICENSE* CHANGELOG*)
     ]
   end
 
