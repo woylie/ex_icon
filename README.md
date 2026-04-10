@@ -16,7 +16,7 @@ Add `ex_icon` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ex_icon, "~> 0.1.2", only: :dev}
+    {:ex_icon, "~> 0.2.0", only: :dev}
   ]
 end
 ```
@@ -39,10 +39,11 @@ ExIcon expects a configuration file named `.ex_icon.exs`.
     module_path: "lib/my_app_web/components/lucide.ex",
     # The name of the generated module.
     module_name: MyAppWeb.Components.Lucide,
-    # SVG attributes that should _not_ be turned into component attributes.
+    # SVG attributes that should be turned into component attributes. Only
+    # attributes present in the original SVG files will be considered.
     # Values must be lowercase strings.
-    # Default: ["xmlns", "viewbox", "width", "height"]
-    # ignore_attrs: []
+    # Example: ["stroke", "stroke-width"]
+    attrs: []
   ]
 ]
 ```
@@ -56,6 +57,54 @@ the icon library and generate a module with function components with:
 ```bash
 mix ex_icon.gen_icons
 ```
+
+## Attributes
+
+ExIcon can optionally turn SVG attributes present in the original SVG files into
+function component attributes.
+
+For example, consider this original SVG:
+
+```svg
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  stroke="currentColor"
+  stroke-width="2"
+>
+  <path d="m12 19-7-7 7-7" />
+  <path d="M19 12H5" />
+</svg>
+```
+
+If you set the `attrs` option to `["stroke"]`, the generated function component
+will look like this:
+
+```elixir
+attr :stroke, :string, default: "currentColor"
+
+def arrow_left(assigns) do
+  ~H"""
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    stroke={@stroke}
+    stroke-width="2"
+    aria-hidden="true"
+  >
+    <path d="m12 19-7-7 7-7" />
+    <path d="M19 12H5" />
+  </svg>
+  """
+end
+```
+
+Note that if you generate a lot of icons, compilation times can increase
+substantially by adding attributes.
 
 ## Providers
 

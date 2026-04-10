@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## [0.2.0] - 2026-04-10
+
+### Changed
+
+- Replace `ignore_attrs` option with `attrs`.
+- Add `aria-hidden="true"` to SVGs if not already present.
+
 ## [0.1.2] - 2026-04-10
 
 ### Fixed
