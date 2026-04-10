@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## [0.3.0] - 2026-04-10
+
+### Added
+
+- Add provider for Simple Icons.
+- Add `--icon-set` flag to `mix ex_icon.gen.icons`.
+
+### Changed
+
+- Change `c:ExIcon.Provider.svg_folder/0` to `c:ExIcon.Provider.svg_folder/1`,
+  with the argument being the version.
+
 ## [0.2.0] - 2026-04-10
 
 ### Changed
