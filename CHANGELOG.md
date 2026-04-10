@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## [0.1.2] - 2026-04-10
+
+### Fixed
+
+- Run `mix format` separately instead of relying on `copy_template/4` for
+  formatting to ensure formatter config is applied.
+
 ## [0.1.1] - 2026-04-10
 
 ### Fixed
