@@ -42,7 +42,7 @@ defmodule ExIconTest do
       assert name == "arrow_left"
 
       assert transformed_svg == """
-             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke={@stroke} stroke-width={@stroke_width}>
+             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke={@stroke} stroke-width={@stroke_width} aria-hidden="true">
                <path d="m12 19-7-7 7-7" />
                <path d="M19 12H5" />
              </svg>\
@@ -124,9 +124,11 @@ defmodule ExIconTest do
   end
 
   describe "transform_svg/2" do
-    test "returns empty svg unchanged" do
+    test "adds aria-hidden to empty svg" do
       svg = "<svg></svg>"
-      assert ExIcon.transform_svg(svg) == {svg, []}
+
+      assert ExIcon.transform_svg(svg) ==
+               {~s(<svg aria-hidden="true"></svg>), []}
     end
 
     test "returns svg without attributes unchanged" do
@@ -137,7 +139,24 @@ defmodule ExIconTest do
       </svg>
       """
 
-      assert ExIcon.transform_svg(svg) == {svg, []}
+      assert ExIcon.transform_svg(svg) ==
+               {"""
+                <svg aria-hidden="true">
+                  <path d="m12 19-7-7 7-7" />
+                  <path d="M19 12H5" />
+                </svg>\
+                """, []}
+    end
+
+    test "does not add aria-hidden attribute if already present" do
+      svg = """
+      <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="m12 19-7-7 7-7" />
+        <path d="M19 12H5" />
+      </svg>
+      """
+
+      assert ExIcon.transform_svg(svg) == {String.trim(svg), []}
     end
 
     test "transforms svg without inner content and extra attributes unchanged" do
@@ -146,7 +165,11 @@ defmodule ExIconTest do
       </svg>
       """
 
-      assert ExIcon.transform_svg(svg) == {String.trim(svg), []}
+      assert ExIcon.transform_svg(svg) ==
+               {"""
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                </svg>\
+                """, []}
     end
 
     test "replaces attributes with HEEx variables" do
@@ -159,7 +182,7 @@ defmodule ExIconTest do
 
       assert ExIcon.transform_svg(svg, ["stroke", "stroke-width"]) ==
                {"""
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke={@stroke} stroke-width={@stroke_width}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke={@stroke} stroke-width={@stroke_width} aria-hidden="true">
                   <path d="m12 19-7-7 7-7" />
                   <path d="M19 12H5" />
                 </svg>\
@@ -184,7 +207,7 @@ defmodule ExIconTest do
                ["stroke", "stroke-width"]
              ) ==
                {"""
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke={@stroke} stroke-width={@stroke_width}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke={@stroke} stroke-width={@stroke_width} aria-hidden="true">
                   <path d="m12 19-7-7 7-7" />
                   <path d="M19 12H5" />
                 </svg>\
@@ -201,7 +224,7 @@ defmodule ExIconTest do
 
       assert ExIcon.transform_svg(svg, ["stroke"]) ==
                {"""
-                <svg xmlNS="http://www.w3.org/2000/svg" WIDTH="24" heiGHt="24" viewbox="0 0 24 24" Stroke={@stroke} Stroke-Width="2">
+                <svg xmlNS="http://www.w3.org/2000/svg" WIDTH="24" heiGHt="24" viewbox="0 0 24 24" Stroke={@stroke} Stroke-Width="2" aria-hidden="true">
                   <path d="m12 19-7-7 7-7" />
                   <path d="M19 12H5" />
                 </svg>\

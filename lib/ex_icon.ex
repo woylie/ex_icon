@@ -73,6 +73,8 @@ defmodule ExIcon do
   and a list of substituted attributes with their values as a second element.
   The attribute name is converted to snake case.
 
+  An `aria-hidden="true"` attribute is added if not already present.
+
   ## Example
 
       iex> svg = \"\"\"
@@ -90,7 +92,7 @@ defmodule ExIcon do
       ...>  \"\"\"
       iex> ExIcon.transform_svg(svg)
       {\"\"\"
-       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
          <path d="m12 19-7-7 7-7" />
          <path d="M19 12H5" />
        </svg>\\
@@ -111,7 +113,7 @@ defmodule ExIcon do
       ...>  \"\"\"
       iex> ExIcon.transform_svg(svg, ["stroke", "stroke-width"])
       {\"\"\"
-       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke={@stroke} stroke-width={@stroke_width}>
+       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke={@stroke} stroke-width={@stroke_width} aria-hidden="true">
          <path d="m12 19-7-7 7-7" />
          <path d="M19 12H5" />
        </svg>\\
@@ -130,10 +132,16 @@ defmodule ExIcon do
           |> Enum.filter(fn {k, _} -> substitute_attr?(k, substitute_attrs) end)
           |> Enum.map(fn {k, v} -> {to_snake_case(k), v} end)
 
-        svg = "<svg #{svg_attrs}>#{inner}</svg>"
+        svg = ~s(<svg #{svg_attrs} aria-hidden="true">#{inner}</svg>)
         {svg, substituted_attrs}
 
       :error ->
+        # original SVG has no attributes
+        svg =
+          svg
+          |> String.trim()
+          |> String.replace("<svg>", ~s(<svg aria-hidden="true">))
+
         {svg, []}
     end
   end
@@ -143,13 +151,17 @@ defmodule ExIcon do
   end
 
   defp build_attrs(attrs, []) do
-    Enum.map_join(attrs, " ", fn {k, v} ->
+    attrs
+    |> Enum.reject(fn {k, _} -> k == "aria-hidden" end)
+    |> Enum.map_join(" ", fn {k, v} ->
       ~s(#{k}="#{v}")
     end)
   end
 
   defp build_attrs(attrs, substitute_attrs) do
-    Enum.map_join(attrs, " ", fn {k, v} ->
+    attrs
+    |> Enum.reject(fn {k, _} -> k == "aria-hidden" end)
+    |> Enum.map_join(" ", fn {k, v} ->
       if substitute_attr?(k, substitute_attrs) do
         "#{k}={@#{to_snake_case(k)}}"
       else
