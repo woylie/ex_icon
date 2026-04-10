@@ -66,4 +66,4 @@ behaviour. Currently, ExIcon includes a single provider for
 ## Contributing
 
 Please open an issue or PR if you need additional options, features, or support
-for other icon libraries. Be sure to read the [contributing guidelines](https://github.com/woylie/ex_unit?tab=contributing-ov-file).
+for other icon libraries. Be sure to read the [contributing guidelines](https://github.com/woylie/ex_icon?tab=contributing-ov-file).
