@@ -83,7 +83,8 @@ defmodule ExIcon.MixProject do
       skip_undefined_reference_warnings_on: ["CHANGELOG.md"],
       groups_for_modules: [
         Providers: [
-          ExIcon.Lucide
+          ExIcon.Lucide,
+          ExIcon.SimpleIcons
         ]
       ]
     ]
