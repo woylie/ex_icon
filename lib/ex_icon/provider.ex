@@ -14,5 +14,5 @@ defmodule ExIcon.Provider do
   @doc """
   Returns the folder that contains the SVG files in the unpacked release.
   """
-  @callback svg_folder() :: String.t()
+  @callback svg_folder(version) :: String.t() when version: String.t()
 end

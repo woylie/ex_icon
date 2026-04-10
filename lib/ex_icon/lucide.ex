@@ -1,6 +1,8 @@
 defmodule ExIcon.Lucide do
   @moduledoc """
   ExIcon provider for Lucide icons.
+
+  https://lucide.dev
   """
 
   @behaviour ExIcon.Provider
@@ -11,7 +13,7 @@ defmodule ExIcon.Lucide do
   end
 
   @impl true
-  def svg_folder do
+  def svg_folder(_) do
     "icons"
   end
 end

@@ -8,20 +8,36 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
 
   ## Usage
 
-      mix ex_icon.gen
+  Download and generate icons for all configured providers:
+
+      mix ex_icon.gen.icons
+
+  Download and generate icons for a single named provider:
+
+      mix ex_icon.gen.icons --icon-set lucide
+
+  The value must reference one of the top level keys in your configuration
+  file.
   """
 
   use Mix.Task
 
+  @switches [
+    strict: [
+      icon_set: :string
+    ]
+  ]
+
   @tmp_dir "ex_icon"
 
   @impl Mix.Task
-  def run(_) do
+  def run(args) do
+    {opts, []} = OptionParser.parse!(args, @switches)
+
     case ExIcon.read_config() do
       {:ok, config} ->
         tmp_dir = Path.join([System.tmp_dir!(), @tmp_dir])
-        download_and_generate_all(config, tmp_dir)
-
+        do_run(config, tmp_dir, opts[:icon_set])
         IO.puts("Done.")
 
       {:error, reason} ->
@@ -32,6 +48,28 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
         """)
 
         exit({:shutdown, 1})
+    end
+  end
+
+  defp do_run(config, tmp_dir, nil) do
+    download_and_generate_all(config, tmp_dir)
+  end
+
+  defp do_run(config, tmp_dir, icon_set) when is_binary(icon_set) do
+    icon_set = String.to_atom(icon_set)
+
+    if opts = Keyword.get(config, icon_set) do
+      download_and_generate({icon_set, opts}, tmp_dir)
+    else
+      IO.puts("""
+      Icon set #{icon_set} not found in configuration.
+
+      Available icon sets:
+
+          #{inspect(Keyword.keys(config))}
+      """)
+
+      exit({:shutdown, 1})
     end
   end
 

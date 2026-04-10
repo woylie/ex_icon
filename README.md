@@ -18,7 +18,7 @@ Add `ex_icon` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ex_icon, "~> 0.2.0", only: :dev}
+    {:ex_icon, "~> 0.3.0", only: :dev}
   ]
 end
 ```
@@ -111,8 +111,10 @@ substantially by adding attributes.
 ## Providers
 
 Providers for specific icon libraries are based on the `ExIcon.Provider`
-behaviour. Currently, ExIcon includes a single provider for
-[Lucide](https://lucide.dev/).
+behaviour. The library currently supports these providers:
+
+- [Lucide](https://lucide.dev/)
+- [Simple Icons](https://simpleicons.org/)
 
 ## Contributing
 
