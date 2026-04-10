@@ -1,0 +1,16 @@
+defmodule <%= inspect(@module_name) %> do
+  @moduledoc """
+  Provides function components for Lucide icons.
+
+  This file is generated. Do not edit.
+  """
+  use Phoenix.Component
+<%= for {name, {svg, attrs}} <- @icons do %><%= for {attr, default} <- attrs do %>
+  attr :<%= attr %>, :string, default: "<%= default %>"<% end %>
+
+  def <%= name %>(assigns) do
+    ~H"""
+<%= ExIcon.indent(svg, 4) %>
+    """
+  end
+<% end %>end
