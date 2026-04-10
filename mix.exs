@@ -7,7 +7,7 @@ defmodule ExIcon.MixProject do
   def project do
     [
       app: :ex_icon,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
