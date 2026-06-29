@@ -33,11 +33,10 @@ jobs:
             deps
           key: ${{ runner.os }}-otp-${{ steps.beam.outputs.otp-version }}-elixir-${{ steps.beam.outputs.elixir-version }}-mix-${{ hashFiles('mix.lock') }}
           restore-keys: ${{ runner.os }}-otp-${{ steps.beam.outputs.otp-version }}-elixir-${{ steps.beam.outputs.elixir-version }}-
+      - name: Authenticate with Hex
+        run: mix hex.organization auth scoville --key ${{ secrets.HEX_ORGANIZATION_KEY }}
       - name: Install Dependencies
-        run: |
-          mix local.rebar --force
-          mix local.hex --force
-          mix deps.get
+        run: mix deps.get
       - name: Run Tests
         run: mix coveralls.github --warnings-as-errors
 
@@ -71,11 +70,10 @@ jobs:
             deps
           key: ${{ runner.os }}-otp-${{ steps.beam.outputs.otp-version }}-elixir-${{ steps.beam.outputs.elixir-version }}-mix-${{ hashFiles('mix.lock') }}
           restore-keys: ${{ runner.os }}-otp-${{ steps.beam.outputs.otp-version }}-elixir-${{ steps.beam.outputs.elixir-version }}-
+      - name: Authenticate with Hex
+        run: mix hex.organization auth scoville --key ${{ secrets.HEX_ORGANIZATION_KEY }}
       - name: Install Dependencies
-        run: |
-          mix local.rebar --force
-          mix local.hex --force
-          mix deps.get
+        run: mix deps.get
       - name: Run Tests
         run: mix test
 
@@ -126,11 +124,10 @@ jobs:
             ${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-plt-
           path: |
             .plts
+      - name: Authenticate with Hex
+        run: mix hex.organization auth scoville --key ${{ secrets.HEX_ORGANIZATION_KEY }}
       - name: Install Dependencies
-        run: |
-          mix local.rebar --force
-          mix local.hex --force
-          mix deps.get
+        run: mix deps.get
       - name: Compile
         run: mix compile --warnings-as-errors
       - name: Run Formatter
