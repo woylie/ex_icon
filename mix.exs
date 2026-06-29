@@ -23,7 +23,8 @@ defmodule ExIcon.MixProject do
       homepage_url: @source_url,
       description: description(),
       package: package(),
-      docs: docs()
+      docs: docs(),
+      hex: [policy: [org: "scoville", name: "baseline"]]
     ]
   end
 
