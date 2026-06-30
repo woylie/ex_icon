@@ -50,7 +50,7 @@ defmodule ExIcon.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:credo, "== 1.7.18", only: [:dev, :test], runtime: false},
+      {:credo, "== 1.7.19", only: [:dev, :test], runtime: false},
       {:dialyxir, "1.4.7", only: [:dev, :test], runtime: false},
       {:ex_doc, "0.40.3", only: :dev, runtime: false},
       {:excoveralls, "0.18.5", only: :test},
