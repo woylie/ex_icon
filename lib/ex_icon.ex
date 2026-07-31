@@ -647,8 +647,6 @@ defmodule ExIcon do
 
   @doc false
   def unpack_archive!(zip, path) do
-    reject_unsafe_entries!(zip)
-
     case :zip.extract(zip, [{:cwd, String.to_charlist(path)}]) do
       {:ok, _} ->
         :ok
@@ -660,43 +658,6 @@ defmodule ExIcon do
         #{inspect(result, pretty: true)}
         """
     end
-  end
-
-  defp reject_unsafe_entries!(zip) do
-    case :zip.list_dir(zip) do
-      {:ok, entries} ->
-        case Enum.filter(entry_names(entries), &unsafe_path?/1) do
-          [] ->
-            :ok
-
-          unsafe_entries ->
-            raise """
-            Refusing to unpack zip archive
-
-            The archive contains entries that would be written outside the
-            target folder:
-
-            #{Enum.map_join(unsafe_entries, "\n", &"    #{&1}")}
-            """
-        end
-
-      result ->
-        raise """
-        Unable to read zip archive
-
-        #{inspect(result, pretty: true)}
-        """
-    end
-  end
-
-  defp entry_names(entries) do
-    for {:zip_file, name, _info, _comment, _offset, _comp_size} <- entries do
-      List.to_string(name)
-    end
-  end
-
-  defp unsafe_path?(name) do
-    Path.type(name) != :relative or ".." in Path.split(name)
   end
 
   @doc false
