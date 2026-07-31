@@ -203,6 +203,21 @@ behaviour. The library currently supports these providers:
 - [Lucide](https://lucide.dev/)
 - [Simple Icons](https://simpleicons.org/)
 
+## Versioning
+
+ExIcon follows semantic versioning. The public API is:
+
+- the format of the configuration file
+- the `ExIcon.Provider` behaviour
+- the command line interface of `mix ex_icon.gen.icons`
+- the shape of the generated components: one function component per icon, named
+  after the SVG file in snake case, with a `:string` attribute for every
+  attribute configured with `attrs`
+
+Everything else is internal, including all functions of the `ExIcon` module. The
+generated modules only depend on `Phoenix.Component`, so upgrading ExIcon never
+requires regenerating them.
+
 ## Project status
 
 ExIcon is actively maintained, but since it covers the use cases it was built

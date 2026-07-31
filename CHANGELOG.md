@@ -17,9 +17,8 @@
 
 ### Changed
 
-- Change the second element of the tuple returned by `ExIcon.transform_svg/2`
-  from a list of `{name, default}` tuples to a list of `{name, options}` tuples,
-  where the options are those of the generated component attribute.
+- Make `ExIcon.transform_svg/2` internal. The `ExIcon` module has no public
+  functions anymore.
 - Cache downloaded releases in the Mix cache folder instead of downloading them
   into a shared temporary folder on every run.
 - Only move a release into the cache once it is complete, so that an
