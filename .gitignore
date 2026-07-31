@@ -24,3 +24,5 @@ ex_icon-*.tar
 
 # Destination folder for dev env module generation
 /output/
+
+.plts/
