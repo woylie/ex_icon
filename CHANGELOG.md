@@ -29,6 +29,7 @@
 - Keep the `aria-hidden` value set by an SVG file instead of always overwriting
   it with `true`.
 - Apply configured attributes to SVG files that have no attributes at all.
+- Format all generated modules instead of only the first one.
 
 ## [0.3.0] - 2026-04-10
 
