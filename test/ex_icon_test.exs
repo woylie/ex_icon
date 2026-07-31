@@ -18,6 +18,21 @@ defmodule ExIconTest do
     def svg_folder(_), do: "icons"
   end
 
+  defmodule LocalProvider do
+    @behaviour ExIcon.Provider
+
+    @impl true
+    def release_url(version) do
+      "#{Application.fetch_env!(:ex_icon, :test_base_url)}/#{version}.zip"
+    end
+
+    @impl true
+    def svg_folder(_), do: "icons"
+
+    @impl true
+    def variants(_), do: %{plain: "icons", nested: "icons/nested"}
+  end
+
   describe "prepare_assigns/2" do
     @describetag :tmp_dir
     test "prepares assigns for configured icon", %{tmp_dir: tmp_dir} do
@@ -127,6 +142,29 @@ defmodule ExIconTest do
         end)
 
       refute output =~ "Could not read file"
+    end
+
+    test "skips and reports icons that cannot be read", %{tmp_dir: tmp_dir} do
+      opts = [
+        icons: ["arrow-left", "does-not-exist"],
+        provider: ExIcon.Lucide,
+        version: "1.8.0",
+        module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
+        module_name: MyAppWeb.Components.Lucide
+      ]
+
+      File.write!(Path.join(tmp_dir, "arrow-left.svg"), "<svg></svg>")
+
+      output =
+        capture_io(fn ->
+          assert [
+                   icons: [{"arrow_left", _}],
+                   module_name: MyAppWeb.Components.Lucide
+                 ] = ExIcon.prepare_assigns(tmp_dir, opts)
+        end)
+
+      assert output =~ "Could not read file"
+      assert output =~ "does-not-exist.svg"
     end
 
     test "ignores non-svg files", %{tmp_dir: tmp_dir} do
@@ -585,6 +623,136 @@ defmodule ExIconTest do
     end
   end
 
+  describe "download/3 with a served release" do
+    @describetag :tmp_dir
+
+    setup %{tmp_dir: tmp_dir} do
+      {:ok, _} = Application.ensure_all_started(:inets)
+
+      served = Path.join(tmp_dir, "served")
+      File.mkdir_p!(served)
+
+      {:ok, {_name, zip}} =
+        :zip.create(
+          ~c"1.0.0.zip",
+          [
+            {~c"icons/arrow-left.svg", "<svg></svg>"},
+            {~c"icons/nested/bell.svg", "<svg></svg>"}
+          ],
+          [:memory]
+        )
+
+      File.write!(Path.join(served, "1.0.0.zip"), zip)
+
+      {:ok, httpd} =
+        :inets.start(:httpd,
+          port: 0,
+          server_name: ~c"ex_icon_test",
+          server_root: String.to_charlist(served),
+          document_root: String.to_charlist(served),
+          bind_address: {127, 0, 0, 1}
+        )
+
+      port = Keyword.fetch!(:httpd.info(httpd), :port)
+      Application.put_env(:ex_icon, :test_base_url, "http://127.0.0.1:#{port}")
+
+      on_exit(fn ->
+        :inets.stop(:httpd, httpd)
+        Application.delete_env(:ex_icon, :test_base_url)
+      end)
+
+      cache_dir = Path.join(tmp_dir, "cache")
+
+      opts = [
+        icons: :all,
+        provider: LocalProvider,
+        version: "1.0.0",
+        module_path: Path.join(tmp_dir, "lib/components/icons.ex"),
+        module_name: MyAppWeb.Components.Icons
+      ]
+
+      %{cache_dir: cache_dir, opts: opts}
+    end
+
+    test "downloads and unpacks the release into the cache", %{
+      cache_dir: cache_dir,
+      opts: opts
+    } do
+      {icon_dir, output} = with_io(fn -> ExIcon.download(cache_dir, opts) end)
+
+      assert output =~ "Downloading local_provider 1.0.0..."
+      assert icon_dir == Path.join([cache_dir, "local_provider", "1.0.0"])
+
+      assert File.read!(Path.join([icon_dir, "icons", "arrow-left.svg"])) ==
+               "<svg></svg>"
+
+      assert File.ls!(Path.join(cache_dir, "local_provider")) == ["1.0.0"]
+    end
+
+    test "reuses the cached release on the next call", %{
+      cache_dir: cache_dir,
+      opts: opts
+    } do
+      capture_io(fn -> ExIcon.download(cache_dir, opts) end)
+
+      marker = Path.join([cache_dir, "local_provider", "1.0.0", "marker"])
+      File.write!(marker, "kept")
+
+      assert capture_io(fn -> ExIcon.download(cache_dir, opts) end) == ""
+      assert File.read!(marker) == "kept"
+    end
+
+    test "downloads again with the force option", %{
+      cache_dir: cache_dir,
+      opts: opts
+    } do
+      capture_io(fn -> ExIcon.download(cache_dir, opts) end)
+
+      marker = Path.join([cache_dir, "local_provider", "1.0.0", "marker"])
+      File.write!(marker, "discarded")
+
+      assert capture_io(fn ->
+               ExIcon.download(cache_dir, opts, force: true)
+             end) =~ "Downloading local_provider 1.0.0..."
+
+      refute File.exists?(marker)
+
+      assert File.exists?(
+               Path.join([cache_dir, "local_provider", "1.0.0", "icons"])
+             )
+    end
+
+    test "raises if the release cannot be moved into the cache", %{
+      cache_dir: cache_dir,
+      opts: opts
+    } do
+      icon_dir = Path.join([cache_dir, "local_provider", "1.0.0"])
+      File.mkdir_p!(Path.dirname(icon_dir))
+      File.write!(icon_dir, "not a folder")
+
+      capture_io(fn ->
+        assert_raise RuntimeError,
+                     ~r/Unable to move the downloaded icons into the cache/,
+                     fn -> ExIcon.download(cache_dir, opts) end
+      end)
+
+      assert File.ls!(Path.dirname(icon_dir)) == ["1.0.0"]
+    end
+
+    test "generates a module per variant from a single download", %{
+      cache_dir: cache_dir,
+      opts: opts
+    } do
+      opts = Keyword.put(opts, :variants, [:plain, :nested])
+
+      {icon_dir, _output} = with_io(fn -> ExIcon.download(cache_dir, opts) end)
+
+      for {svg_folder, _module_name, _module_path} <- ExIcon.targets(opts) do
+        assert File.dir?(Path.join(icon_dir, svg_folder))
+      end
+    end
+  end
+
   describe "download/2" do
     @describetag :tmp_dir
 
@@ -666,6 +834,25 @@ defmodule ExIconTest do
 
       assert File.read!(Path.join([target, "icons", "arrow-left.svg"])) ==
                "<svg></svg>"
+    end
+
+    test "raises if the archive cannot be read", %{tmp_dir: tmp_dir} do
+      assert_raise RuntimeError, ~r/Unable to read zip archive/, fn ->
+        ExIcon.unpack_archive!("not a zip archive", tmp_dir)
+      end
+    end
+
+    test "raises if the archive cannot be unpacked", %{tmp_dir: tmp_dir} do
+      target = Path.join(tmp_dir, "read-only")
+      File.mkdir_p!(target)
+      File.chmod!(target, 0o500)
+      on_exit(fn -> File.chmod(target, 0o700) end)
+
+      zip = build_zip([{~c"icons/arrow-left.svg", "<svg></svg>"}])
+
+      assert_raise RuntimeError, ~r/Unable to unpack zip archive/, fn ->
+        ExIcon.unpack_archive!(zip, target)
+      end
     end
 
     test "refuses entries that escape the target folder", %{tmp_dir: tmp_dir} do
