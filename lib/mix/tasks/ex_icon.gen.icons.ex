@@ -115,7 +115,24 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
   end
 
   defp download_and_generate_all(config, cache_dir, force?) do
-    Enum.each(config, &download_and_generate(&1, cache_dir, force?))
+    config
+    |> with_force_flags(force?)
+    |> Enum.each(fn {icon_set, force_release?} ->
+      download_and_generate(icon_set, cache_dir, force_release?)
+    end)
+  end
+
+  defp with_force_flags(config, force?) do
+    {icon_sets, _seen} =
+      Enum.map_reduce(config, MapSet.new(), fn {_name, opts} = icon_set, seen ->
+        release =
+          {Keyword.fetch!(opts, :provider), Keyword.fetch!(opts, :version)}
+
+        force_release? = force? and not MapSet.member?(seen, release)
+        {{icon_set, force_release?}, MapSet.put(seen, release)}
+      end)
+
+    icon_sets
   end
 
   defp download_and_generate({config_name, opts}, cache_dir, force?) do

@@ -752,7 +752,7 @@ defmodule ExIconTest do
       assert File.ls!(Path.dirname(icon_dir)) == ["1.0.0"]
     end
 
-    test "generates a module per variant from a single download", %{
+    test "unpacks the folder of every variant from a single download", %{
       cache_dir: cache_dir,
       opts: opts
     } do
@@ -766,7 +766,7 @@ defmodule ExIconTest do
     end
   end
 
-  describe "download/2" do
+  describe "download/3" do
     @describetag :tmp_dir
 
     test "reuses a cached release without downloading again", %{

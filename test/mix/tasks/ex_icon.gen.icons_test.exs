@@ -19,25 +19,18 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
     def variants(_), do: %{plain: "icons", nested: "icons/nested"}
   end
 
-  setup_all do
-    cache_dir = Path.join(System.tmp_dir!(), "ex_icon_gen_icons_test")
+  setup %{tmp_dir: tmp_dir} do
+    cache_dir = Path.join(tmp_dir, "cache")
     svg_dir = Path.join([cache_dir, "test_provider", "1.0.0", "icons"])
 
-    File.rm_rf!(cache_dir)
     File.mkdir_p!(Path.join(svg_dir, "nested"))
     File.write!(Path.join(svg_dir, "arrow-left.svg"), svg())
     File.write!(Path.join([svg_dir, "nested", "bell.svg"]), svg())
 
-    on_exit(fn ->
-      System.delete_env("EX_ICON_CACHE_DIR")
-      File.rm_rf!(cache_dir)
-    end)
+    System.put_env("EX_ICON_CACHE_DIR", cache_dir)
+    on_exit(fn -> System.delete_env("EX_ICON_CACHE_DIR") end)
 
     %{cache_dir: cache_dir}
-  end
-
-  setup %{cache_dir: cache_dir} do
-    System.put_env("EX_ICON_CACHE_DIR", cache_dir)
   end
 
   defp svg do
@@ -128,6 +121,24 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
 
     assert output =~ "skipping"
     assert File.read!(module_path) == "# edited by hand\n"
+  end
+
+  test "discards a cached release only once per run with --force", %{
+    tmp_dir: tmp_dir
+  } do
+    config_path =
+      write_config(tmp_dir,
+        icons: icon_set(tmp_dir),
+        same_release:
+          icon_set(tmp_dir,
+            module_path: Path.join(tmp_dir, "output/same_release.ex"),
+            module_name: SameRelease
+          )
+      )
+
+    assert_raise RuntimeError, ~r/unable to fetch icons/, fn ->
+      run(config_path, ["--force"])
+    end
   end
 
   test "generates only the named icon set", %{tmp_dir: tmp_dir} do
