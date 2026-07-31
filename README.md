@@ -60,6 +60,15 @@ the icon library and generate a module with function components with:
 mix ex_icon.gen_icons
 ```
 
+Downloaded releases are cached in your Mix cache folder (`~/.cache/mix/ex_icon`
+on Linux, `~/Library/Caches/mix/ex_icon` on macOS), so regenerating your icons
+does not download the same release again. The exact path is printed after the
+task ran. To force a fresh download, run:
+
+```bash
+mix ex_icon.gen_icons --force
+```
+
 ## Attributes
 
 ExIcon can optionally turn SVG attributes present in the original SVG files into

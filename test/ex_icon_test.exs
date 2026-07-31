@@ -1,6 +1,22 @@
 defmodule ExIconTest do
   use ExUnit.Case
+
+  import ExUnit.CaptureIO
+
+  alias ExIconTest.UnreachableProvider
+
   doctest ExIcon
+
+  defmodule UnreachableProvider do
+    @moduledoc false
+    @behaviour ExIcon.Provider
+
+    @impl true
+    def release_url(_), do: "https://localhost:1/nonexistent.zip"
+
+    @impl true
+    def svg_folder(_), do: "icons"
+  end
 
   describe "prepare_assigns/2" do
     @describetag :tmp_dir
@@ -246,6 +262,118 @@ defmodule ExIconTest do
     end
   end
 
+  describe "download/2" do
+    @describetag :tmp_dir
+
+    test "reuses a cached release without downloading again", %{
+      tmp_dir: tmp_dir
+    } do
+      opts = [
+        icons: :all,
+        provider: ExIcon.Lucide,
+        version: "1.8.0",
+        module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
+        module_name: MyAppWeb.Components.Lucide
+      ]
+
+      svg_dir = Path.join([tmp_dir, "lucide", "1.8.0", "icons"])
+      File.mkdir_p!(svg_dir)
+      File.write!(Path.join(svg_dir, "cached.svg"), "<svg></svg>")
+
+      assert ExIcon.download(tmp_dir, opts) == svg_dir
+      assert File.read!(Path.join(svg_dir, "cached.svg")) == "<svg></svg>"
+    end
+
+    test "downloads again when forced", %{tmp_dir: tmp_dir} do
+      opts = [
+        icons: :all,
+        provider: UnreachableProvider,
+        version: "1.0.0",
+        module_path: Path.join(tmp_dir, "lib/components/icons.ex"),
+        module_name: MyAppWeb.Components.Icons
+      ]
+
+      svg_dir = Path.join([tmp_dir, "unreachable_provider", "1.0.0", "icons"])
+      File.mkdir_p!(svg_dir)
+
+      assert ExIcon.download(tmp_dir, opts) == svg_dir
+
+      capture_io(fn ->
+        assert_raise RuntimeError, ~r/unable to fetch icons/, fn ->
+          ExIcon.download(tmp_dir, opts, force: true)
+        end
+      end)
+
+      refute File.dir?(svg_dir)
+    end
+
+    test "leaves no staging folder behind when the download fails", %{
+      tmp_dir: tmp_dir
+    } do
+      opts = [
+        icons: :all,
+        provider: UnreachableProvider,
+        version: "1.0.0",
+        module_path: Path.join(tmp_dir, "lib/components/icons.ex"),
+        module_name: MyAppWeb.Components.Icons
+      ]
+
+      capture_io(fn ->
+        assert_raise RuntimeError, ~r/unable to fetch icons/, fn ->
+          ExIcon.download(tmp_dir, opts)
+        end
+      end)
+
+      refute File.dir?(Path.join([tmp_dir, "unreachable_provider", "1.0.0"]))
+      assert File.ls!(Path.join(tmp_dir, "unreachable_provider")) == []
+    end
+  end
+
+  describe "unpack_archive!/2" do
+    @describetag :tmp_dir
+
+    test "unpacks a regular archive", %{tmp_dir: tmp_dir} do
+      zip = build_zip([{~c"icons/arrow-left.svg", "<svg></svg>"}])
+      target = Path.join(tmp_dir, "target")
+      File.mkdir_p!(target)
+
+      assert ExIcon.unpack_archive!(zip, target) == :ok
+
+      assert File.read!(Path.join([target, "icons", "arrow-left.svg"])) ==
+               "<svg></svg>"
+    end
+
+    test "refuses entries that escape the target folder", %{tmp_dir: tmp_dir} do
+      zip =
+        build_zip([
+          {~c"icons/arrow-left.svg", "<svg></svg>"},
+          {~c"../escaped.svg", "<svg></svg>"}
+        ])
+
+      target = Path.join(tmp_dir, "target")
+      File.mkdir_p!(target)
+
+      assert_raise RuntimeError, ~r/would be written outside/, fn ->
+        ExIcon.unpack_archive!(zip, target)
+      end
+
+      assert File.ls!(target) == []
+      refute File.exists?(Path.join(tmp_dir, "escaped.svg"))
+    end
+
+    test "refuses entries with an absolute path", %{tmp_dir: tmp_dir} do
+      zip = build_zip_with_absolute_entry()
+      target = Path.join(tmp_dir, "target")
+      File.mkdir_p!(target)
+
+      assert_raise RuntimeError, ~r/would be written outside/, fn ->
+        ExIcon.unpack_archive!(zip, target)
+      end
+
+      assert File.ls!(target) == []
+    end
+  end
+
   describe "indent/2" do
     test "indents a multi-line string" do
       assert ExIcon.indent(
@@ -344,5 +472,16 @@ defmodule ExIconTest do
     ]
 
     EEx.eval_file(ExIcon.template_path(), assigns: assigns)
+  end
+
+  defp build_zip(entries) do
+    {:ok, {_name, zip}} = :zip.create(~c"icons.zip", entries, [:memory])
+    zip
+  end
+
+  defp build_zip_with_absolute_entry do
+    ~c"_abs/escaped.svg"
+    |> then(&build_zip([{&1, "<svg></svg>"}]))
+    |> String.replace("_abs/escaped.svg", "/abs/escaped.svg")
   end
 end
