@@ -34,6 +34,8 @@
   it with `true`.
 - Apply configured attributes to SVG files that have no attributes at all.
 - Format all generated modules instead of only the first one.
+- Ignore folders with an `.svg` extension when generating all icons of a
+  release.
 
 ## [0.3.0] - 2026-04-10
 

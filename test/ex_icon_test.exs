@@ -106,6 +106,29 @@ defmodule ExIconTest do
                ExIcon.prepare_assigns(tmp_dir, opts)
     end
 
+    test "ignores folders that look like svg files", %{tmp_dir: tmp_dir} do
+      opts = [
+        icons: :all,
+        provider: ExIcon.Lucide,
+        version: "1.8.0",
+        module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
+        module_name: MyAppWeb.Components.Lucide
+      ]
+
+      File.write!(Path.join(tmp_dir, "arrow-left.svg"), "<svg></svg>")
+      File.mkdir_p!(Path.join(tmp_dir, "not-an-icon.svg"))
+
+      output =
+        capture_io(fn ->
+          assert [
+                   icons: [{"arrow_left", _}],
+                   module_name: MyAppWeb.Components.Lucide
+                 ] = ExIcon.prepare_assigns(tmp_dir, opts)
+        end)
+
+      refute output =~ "Could not read file"
+    end
+
     test "ignores non-svg files", %{tmp_dir: tmp_dir} do
       icon_name = "arrow-left"
       icon_path = Path.join(tmp_dir, "#{icon_name}.json")

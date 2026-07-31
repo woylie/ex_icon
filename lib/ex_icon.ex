@@ -507,7 +507,9 @@ defmodule ExIcon do
   defp list_svgs(path) do
     path
     |> File.ls!()
-    |> Enum.filter(&(!File.dir?(&1) and Path.extname(&1) == ".svg"))
+    |> Enum.filter(
+      &(Path.extname(&1) == ".svg" and not File.dir?(Path.join(path, &1)))
+    )
     |> Enum.map(&Path.basename(&1, ".svg"))
   end
 
