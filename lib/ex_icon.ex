@@ -42,12 +42,40 @@ defmodule ExIcon do
         "The name of the generated module. Example: `MyApp.Components.Lucide`."
     ],
     attrs: [
-      type: {:list, :string},
+      type: {:custom, __MODULE__, :validate_attrs, []},
+      type_doc: "list of `t:String.t/0` or `{t:String.t/0, keyword}`",
       required: false,
       default: [],
       doc: """
-      ExIcon substitutes all listed attributes of the `<svg>` element with HEEx
-      variables and adds the corresponding attributes to the HEEx components.
+      Configures the attributes of the `<svg>` element. Each entry is either an
+      attribute name, or a tuple with the attribute name and options.
+
+      If a list entry is a string (e.g. `"stroke"`), the value is replaced with
+      a HEEx variable and a component attribute is added.
+
+      If a list entry is a tuple, the following options are supported:
+
+      - `default` (`{"stroke-width", default: "1.5"}`) - Sets the `default`
+        option on `attr`.
+      - `values` (`{"stroke-linecap", values: ["square", "round"]}`) - Sets the
+        `values` option on `attr`. Generation fails if the value in an SVG file
+        is not among the values.
+      - `required` (`{"stroke-width", required: true}`) - Sets the `required`
+        option on `attr`.
+      - `fixed` (`{"fill", fixed: "none"}`) - Sets a fixed value for the
+        SVG attribute without adding a component attribute.
+
+      Attributes that are not present in the original SVG file are added, as
+      long as a `:default`, `:fixed`, `:values` or `:required` is given.
+      Attribute names are matched case-insensitively, and each attribute may
+      only be configured once.
+
+      If an attribute is added but neither the SVG file nor `:default` provides
+      a value, `required: true` is added to the component attribute.
+
+      An `aria-hidden` attribute is always added, and can be configured like
+      any other attribute. Without configuration, the value of the SVG file is
+      kept, or `"true"` is used if it does not have the attribute.
       """
     ]
   ]
@@ -55,6 +83,13 @@ defmodule ExIcon do
   @config_schema NimbleOptions.new!(
                    *: [type: :keyword_list, keys: @options_schema]
                  )
+
+  @attr_options_schema NimbleOptions.new!(
+                         default: [type: {:or, [:string, nil]}],
+                         fixed: [type: :string],
+                         required: [type: :boolean],
+                         values: [type: {:list, {:or, [:string, nil]}}]
+                       )
 
   @typedoc """
   #{NimbleOptions.docs(@options_schema)}
@@ -65,17 +100,10 @@ defmodule ExIcon do
   Takes an SVG as a string, extracts the attributes, and replaces the
   attributes with HEEx variables.
 
-  The second argument is a list of attributes to turn into component attributes.
-  It must be a list of lowercase strings. Attributes not present in the original
-  SVG file are ignored.
+  The second argument configures the attributes of the `<svg>` element. See
+  `t:options/0` for details.
 
-  The function returns a tuple with the updated SVG string as the first element
-  and a list of substituted attributes with their values as a second element.
-  The attribute name is converted to snake case.
-
-  An `aria-hidden="true"` attribute is added if not already present.
-
-  ## Example
+  ## Examples
 
       iex> svg = \"\"\"
       ...>  <svg
@@ -117,61 +145,186 @@ defmodule ExIcon do
          <path d="m12 19-7-7 7-7" />
          <path d="M19 12H5" />
        </svg>\\
-       \"\"\", [{"stroke", "currentColor"}, {"stroke_width", "2"}]}
+       \"\"\", [{"stroke", [default: "currentColor"]}, {"stroke_width", [default: "2"]}]}
+
+  Overriding the default value of a component attribute:
+
+      iex> svg = ~s(<svg stroke-width="2"><path d="M19 12H5" /></svg>)
+      iex> ExIcon.transform_svg(svg, [{"stroke-width", default: "1.5"}])
+      {~s(<svg stroke-width={@stroke_width} aria-hidden="true"><path d="M19 12H5" /></svg>),
+       [{"stroke_width", [default: "1.5"]}]}
+
+  Restricting a component attribute to a set of values:
+
+      iex> svg = ~s(<svg stroke-linecap="round"><path d="M19 12H5" /></svg>)
+      iex> ExIcon.transform_svg(svg, [{"stroke-linecap", values: ["square", "round"]}])
+      {~s(<svg stroke-linecap={@stroke_linecap} aria-hidden="true"><path d="M19 12H5" /></svg>),
+       [{"stroke_linecap", [values: ["square", "round"], default: "round"]}]}
+
+  If the SVG file does not have the attribute and no default is given, the
+  component attribute is required:
+
+      iex> svg = ~s(<svg><path d="M19 12H5" /></svg>)
+      iex> ExIcon.transform_svg(svg, [{"stroke-linecap", values: ["square", "round"]}])
+      {~s(<svg stroke-linecap={@stroke_linecap} aria-hidden="true"><path d="M19 12H5" /></svg>),
+       [{"stroke_linecap", [values: ["square", "round"], required: true]}]}
+
+  Setting a fixed attribute, and adding an attribute that the SVG file does not
+  have:
+
+      iex> svg = ~s(<svg stroke="currentColor"><path d="M19 12H5" /></svg>)
+      iex> ExIcon.transform_svg(svg, [{"stroke", fixed: "red"}, {"fill", fixed: "none"}])
+      {~s(<svg stroke="red" fill="none" aria-hidden="true"><path d="M19 12H5" /></svg>),
+       []}
   """
-  @spec transform_svg(svg, attrs) :: {svg, attrs}
-        when svg: binary, attrs: [binary], attrs: [{binary, binary}]
-  def transform_svg(svg, substitute_attrs \\ [])
-      when is_binary(svg) and is_list(substitute_attrs) do
+  @spec transform_svg(svg, attrs) :: {svg, component_attrs}
+        when svg: binary,
+             attrs: [binary | {binary, keyword}],
+             component_attrs: [{binary, keyword}]
+  def transform_svg(svg, attrs \\ [])
+      when is_binary(svg) and is_list(attrs) do
     case extract_svg(svg) do
-      {:ok, {attrs, inner}} ->
-        svg_attrs = build_attrs(attrs, substitute_attrs)
+      {:ok, {svg_attrs, inner}} ->
+        merged = merge_attrs(svg_attrs, normalize_attrs(attrs))
+        rendered = Enum.map_join(merged, " ", &render_attr/1)
 
-        substituted_attrs =
-          attrs
-          |> Enum.filter(fn {k, _} -> substitute_attr?(k, substitute_attrs) end)
-          |> Enum.map(fn {k, v} -> {to_snake_case(k), v} end)
+        component_attrs =
+          for {:component, name, value, opts} <- merged,
+              do: {to_snake_case(name), attr_options(name, value, opts)}
 
-        svg = ~s(<svg #{svg_attrs} aria-hidden="true">#{inner}</svg>)
-        {svg, substituted_attrs}
+        {~s(<svg #{rendered}>#{inner}</svg>), component_attrs}
 
       :error ->
-        # original SVG has no attributes
-        svg =
-          svg
-          |> String.trim()
-          |> String.replace("<svg>", ~s(<svg aria-hidden="true">))
-
-        {svg, []}
+        {String.trim(svg), []}
     end
   end
 
-  defp substitute_attr?(attr, substitute_attrs) do
-    String.downcase(attr) in substitute_attrs
-  end
+  defp normalize_attrs(attrs) do
+    Enum.map(attrs, fn
+      name when is_binary(name) ->
+        {name, :component, :none, []}
 
-  defp build_attrs(attrs, []) do
-    attrs
-    |> Enum.reject(fn {k, _} -> k == "aria-hidden" end)
-    |> Enum.map_join(" ", fn {k, v} ->
-      ~s(#{k}="#{v}")
+      {name, opts} when is_binary(name) and is_list(opts) ->
+        case Keyword.fetch(opts, :fixed) do
+          {:ok, value} ->
+            {name, :fixed, value, []}
+
+          :error ->
+            {name, :component, Keyword.get(opts, :default, :none),
+             component_opts(opts)}
+        end
     end)
   end
 
-  defp build_attrs(attrs, substitute_attrs) do
-    attrs
-    |> Enum.reject(fn {k, _} -> k == "aria-hidden" end)
-    |> Enum.map_join(" ", fn {k, v} ->
-      if substitute_attr?(k, substitute_attrs) do
-        "#{k}={@#{to_snake_case(k)}}"
-      else
-        ~s(#{k}="#{v}")
+  defp component_opts(opts) do
+    Enum.reject(
+      [
+        values: Keyword.get(opts, :values),
+        required: Keyword.get(opts, :required)
+      ],
+      fn {_, value} -> value in [nil, false] end
+    )
+  end
+
+  defp merge_attrs(svg_attrs, specs) do
+    {aria_attr, svg_attrs} = pop_attr(svg_attrs, "aria-hidden")
+    {aria_spec, specs} = pop_spec(specs, "aria-hidden")
+
+    from_file =
+      Enum.map(svg_attrs, fn {name, value} ->
+        case find_spec(specs, name) do
+          nil -> {:fixed, name, value, []}
+          {_, kind, :none, opts} -> {kind, name, value, opts}
+          {_, kind, override, opts} -> {kind, name, override, opts}
+        end
+      end)
+
+    added =
+      for {name, kind, value, opts} <- specs,
+          value != :none or opts != [],
+          find_attr(svg_attrs, name) == nil,
+          do: {kind, name, value, opts}
+
+    from_file ++ added ++ [aria_hidden(aria_spec, aria_attr)]
+  end
+
+  defp attr_options(name, value, opts) do
+    values = Keyword.get(opts, :values)
+    values_opt = if values, do: [values: values], else: []
+
+    cond do
+      Keyword.get(opts, :required, false) or value == :none ->
+        values_opt ++ [required: true]
+
+      is_nil(values) or value in values ->
+        values_opt ++ [default: value]
+
+      true ->
+        raise ArgumentError, """
+        invalid default value for the #{inspect(name)} attribute
+
+        The value #{inspect(value)} is not one of #{inspect(values)}.
+
+        If it comes from an SVG file, either add it to the :values option, or
+        set a :default that is one of them.
+        """
+    end
+  end
+
+  defp aria_hidden(spec, file_attr) do
+    {spec_name, kind, value, opts} =
+      case spec do
+        nil -> {nil, :fixed, :none, []}
+        {name, kind, value, opts} -> {name, kind, value, opts}
       end
-    end)
+
+    {file_name, file_value} = file_attr || {nil, nil}
+    name = file_name || spec_name || "aria-hidden"
+
+    {kind, name, aria_hidden_value(value, file_value, opts), opts}
+  end
+
+  defp aria_hidden_value(value, file_value, opts) do
+    cond do
+      value != :none -> value
+      not is_nil(file_value) -> file_value
+      opts == [] -> "true"
+      true -> :none
+    end
+  end
+
+  defp render_attr({:component, name, _value, _values}) do
+    "#{name}={@#{to_snake_case(name)}}"
+  end
+
+  defp render_attr({:fixed, name, value, _values}), do: ~s(#{name}="#{value}")
+
+  defp find_attr(attrs, name) do
+    name = String.downcase(name)
+    Enum.find(attrs, fn {k, _} -> String.downcase(k) == name end)
+  end
+
+  defp find_spec(specs, name) do
+    name = String.downcase(name)
+    Enum.find(specs, fn {k, _, _, _} -> String.downcase(k) == name end)
+  end
+
+  defp pop_attr(attrs, name) do
+    case find_attr(attrs, name) do
+      nil -> {nil, attrs}
+      attr -> {attr, List.delete(attrs, attr)}
+    end
+  end
+
+  defp pop_spec(specs, name) do
+    case find_spec(specs, name) do
+      nil -> {nil, specs}
+      spec -> {spec, List.delete(specs, spec)}
+    end
   end
 
   defp extract_svg(svg) do
-    case Regex.run(~r/<svg\s+(.*?)>(.*)<\/svg>/s, svg) do
+    case Regex.run(~r/<svg\s*(.*?)>(.*)<\/svg>/s, svg) do
       [_, raw_attrs, inner] ->
         attrs =
           ~r/([\w-]+)="(.*?)"/
@@ -186,9 +339,115 @@ defmodule ExIcon do
   end
 
   @doc false
+  def validate_attrs(attrs) when is_list(attrs) do
+    with :ok <- validate_each_attr(attrs),
+         :ok <- validate_unique_attrs(attrs) do
+      {:ok, attrs}
+    end
+  end
+
+  def validate_attrs(attrs) do
+    {:error, "expected a list of attributes, got: #{inspect(attrs)}"}
+  end
+
+  defp validate_each_attr(attrs) do
+    Enum.find_value(attrs, :ok, fn attr ->
+      case validate_attr(attr) do
+        :ok -> nil
+        {:error, _} = error -> error
+      end
+    end)
+  end
+
+  defp validate_unique_attrs(attrs) do
+    names = Enum.map(attrs, &String.downcase(attr_name(&1)))
+
+    case names -- Enum.uniq(names) do
+      [] ->
+        :ok
+
+      [name | _] ->
+        {:error, "attribute #{inspect(name)} is configured more than once"}
+    end
+  end
+
+  defp attr_name(name) when is_binary(name), do: name
+  defp attr_name({name, _}) when is_binary(name), do: name
+
+  defp validate_attr(name) when is_binary(name), do: :ok
+
+  defp validate_attr({name, opts}) when is_binary(name) and is_list(opts) do
+    case NimbleOptions.validate(opts, @attr_options_schema) do
+      {:ok, opts} ->
+        validate_attr_options(name, opts)
+
+      {:error, error} ->
+        {:error, "attribute #{inspect(name)}: #{Exception.message(error)}"}
+    end
+  end
+
+  defp validate_attr(attr) do
+    {:error,
+     "expected an attribute name or a {name, options} tuple, got: " <>
+       inspect(attr)}
+  end
+
+  defp validate_attr_options(name, opts) do
+    with :ok <- validate_fixed_option(name, opts),
+         :ok <- validate_required_option(name, opts) do
+      validate_values_option(name, opts)
+    end
+  end
+
+  defp validate_fixed_option(name, opts) do
+    cond do
+      not Keyword.has_key?(opts, :fixed) ->
+        :ok
+
+      Keyword.has_key?(opts, :default) ->
+        {:error, "attribute #{inspect(name)} sets both :default and :fixed"}
+
+      Keyword.has_key?(opts, :values) ->
+        {:error, "attribute #{inspect(name)} sets both :values and :fixed"}
+
+      Keyword.has_key?(opts, :required) ->
+        {:error, "attribute #{inspect(name)} sets both :required and :fixed"}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp validate_required_option(name, opts) do
+    if Keyword.get(opts, :required, false) and Keyword.has_key?(opts, :default) do
+      {:error, "attribute #{inspect(name)} sets both :default and :required"}
+    else
+      :ok
+    end
+  end
+
+  defp validate_values_option(name, opts) do
+    default = Keyword.get(opts, :default, :none)
+    values = Keyword.get(opts, :values)
+
+    cond do
+      values == [] ->
+        {:error, "attribute #{inspect(name)} has an empty :values list"}
+
+      is_list(values) and default != :none and default not in values ->
+        {:error,
+         "attribute #{inspect(name)} has the default value " <>
+           "#{inspect(default)}, which is not one of #{inspect(values)}"}
+
+      true ->
+        :ok
+    end
+  end
+
+  @doc false
   def prepare_assigns(path, opts) do
     module_name = Keyword.fetch!(opts, :module_name)
-    substitute_attrs = Keyword.get(opts, :attrs, [])
+    attrs = Keyword.get(opts, :attrs, [])
 
     icon_names =
       case Keyword.fetch!(opts, :icons) do
@@ -200,7 +459,7 @@ defmodule ExIcon do
       icon_names
       |> Enum.map(fn icon_name ->
         if svg = read_icon(path, icon_name) do
-          {to_snake_case(icon_name), transform_svg(svg, substitute_attrs)}
+          {to_snake_case(icon_name), transform_svg(svg, attrs)}
         end
       end)
       |> Enum.reject(&is_nil/1)
@@ -362,6 +621,13 @@ defmodule ExIcon do
 
   defp unsafe_path?(name) do
     Path.type(name) != :relative or ".." in Path.split(name)
+  end
+
+  @doc false
+  def render_attr_options(opts) do
+    Enum.map_join(opts, ", ", fn {key, value} ->
+      "#{key}: #{inspect(value)}"
+    end)
   end
 
   @doc false

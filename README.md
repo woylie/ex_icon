@@ -41,10 +41,8 @@ ExIcon expects a configuration file named `.ex_icon.exs`.
     module_path: "lib/my_app_web/components/lucide.ex",
     # The name of the generated module.
     module_name: MyAppWeb.Components.Lucide,
-    # SVG attributes that should be turned into component attributes. Only
-    # attributes present in the original SVG files will be considered.
-    # Values must be lowercase strings.
-    # Example: ["stroke", "stroke-width"]
+    # SVG attributes to turn into component attributes, to override, or to add.
+    # Example: ["stroke", {"stroke-width", default: "1.5"}]
     attrs: []
   ]
 ]
@@ -57,7 +55,7 @@ With your configuration in place, you can download the configured release of
 the icon library and generate a module with function components with:
 
 ```bash
-mix ex_icon.gen_icons
+mix ex_icon.gen.icons
 ```
 
 Downloaded releases are cached in your Mix cache folder (`~/.cache/mix/ex_icon`
@@ -66,13 +64,14 @@ does not download the same release again. The exact path is printed after the
 task ran. To force a fresh download, run:
 
 ```bash
-mix ex_icon.gen_icons --force
+mix ex_icon.gen.icons --force
 ```
 
 ## Attributes
 
-ExIcon can optionally turn SVG attributes present in the original SVG files into
-function component attributes.
+ExIcon can optionally turn SVG attributes into function component attributes,
+override the values of the original SVG files, and add attributes that the
+original SVG files do not have.
 
 For example, consider this original SVG:
 
@@ -84,17 +83,46 @@ For example, consider this original SVG:
   viewBox="0 0 24 24"
   stroke="currentColor"
   stroke-width="2"
+  stroke-linecap="round"
 >
   <path d="m12 19-7-7 7-7" />
   <path d="M19 12H5" />
 </svg>
 ```
 
-If you set the `attrs` option to `["stroke"]`, the generated function component
-will look like this:
+And this configuration:
+
+```elixir
+attrs: [
+  # component attribute, defaults to the value in the SVG file
+  "stroke",
+
+  # component attribute with a default value that overrides the value in the
+  # SVG file
+  {"stroke-width", default: "1.5"},
+
+  # component attribute with a limited set of values
+  {"stroke-linecap", values: ["square", "round"]},
+
+  # required attribute
+  {"class", required: true},
+
+  # optional component attribute that is omitted unless it is passed
+  {"stroke-dasharray", default: nil},
+
+  # sets a fixed attribute value without adding a component attribute
+  {"fill", fixed: "none"}
+]
+```
+
+The generated function component will look like this:
 
 ```elixir
 attr :stroke, :string, default: "currentColor"
+attr :stroke_width, :string, default: "1.5"
+attr :stroke_linecap, :string, values: ["square", "round"], default: "round"
+attr :class, :string, required: true
+attr :stroke_dasharray, :string, default: nil
 
 def arrow_left(assigns) do
   ~H"""
@@ -104,7 +132,11 @@ def arrow_left(assigns) do
     height="24"
     viewBox="0 0 24 24"
     stroke={@stroke}
-    stroke-width="2"
+    stroke-width={@stroke_width}
+    stroke-linecap={@stroke_linecap}
+    class={@class}
+    stroke-dasharray={@stroke_dasharray}
+    fill="none"
     aria-hidden="true"
   >
     <path d="m12 19-7-7 7-7" />
@@ -115,7 +147,7 @@ end
 ```
 
 Note that if you generate a lot of icons, compilation times can increase
-substantially by adding attributes.
+substantially by adding component attributes.
 
 ## Providers
 

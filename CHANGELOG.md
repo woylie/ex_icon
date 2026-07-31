@@ -6,6 +6,9 @@
 
 - Add `--force` flag to `mix ex_icon.gen.icons`, which discards the cached
   release and downloads it again.
+- Add `default`, `values`, `required`, and `fixed` options to attribute
+  configuration, which allows you more control over the attributes in the
+  generated HEEx components.
 
 ### Changed
 
@@ -13,6 +16,9 @@
   into a shared temporary folder on every run.
 - Prevent interrupted runs from leaving a partial release behind.
 - Add HTTP request timeouts.
+- Change the second element of the tuple returned by `ExIcon.transform_svg/2`
+  from a list of `{name, default}` tuples to a list of `{name, options}` tuples,
+  where the options are those of the generated component attribute.
 
 ### Fixed
 
@@ -20,6 +26,9 @@
   value containing `#{}` was written into the generated component code
   unescaped, where it would be evaluated during compilation.
 - Refuse release archives with entries pointing outside the target folder.
+- Keep the `aria-hidden` value set by an SVG file instead of always overwriting
+  it with `true`.
+- Apply configured attributes to SVG files that have no attributes at all.
 
 ## [0.3.0] - 2026-04-10
 
