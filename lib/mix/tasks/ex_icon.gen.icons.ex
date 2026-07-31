@@ -1,44 +1,40 @@
 defmodule Mix.Tasks.ExIcon.Gen.Icons do
-  @shortdoc "Downloads and generates all icons"
+  @shortdoc "Downloads icon libraries and generates the icon modules"
 
   @moduledoc """
-  Downloads and generates all icons.
+  Downloads the configured icon libraries and generates the icon modules.
 
-  By default, the task attempts to read the configuration file `.ex_icon.exs`
-  in the folder it is run in. You can choose a different path with the
-  `--config` argument.
+      $ mix ex_icon.gen.icons
 
-  ## Usage
+  For every icon set in the configuration file, the release of the icon library
+  is downloaded and a module with a function component per icon is generated.
 
-  Download and generate icons for all configured providers:
+  Releases are cached, so regenerating the icons does not download them again.
+  Paths in the configuration file are relative to the folder the task is run in.
 
-      mix ex_icon.gen.icons
+  ## Command line options
 
-  Download and generate icons for a single named provider:
+    * `--cache-dir` - the folder to cache the downloaded releases in, defaults
+      to the Mix cache folder
+    * `--config` - the path of the configuration file, defaults to
+      `.ex_icon.exs` in the folder the task is run in
+    * `--force` - discards the cached releases and downloads them again
+    * `--icon-set` - only generates the given icon set, which must be one of
+      the top level keys in the configuration file
 
-      mix ex_icon.gen.icons --icon-set lucide
+  ## Examples
 
-  The value must reference one of the top level keys in your configuration
-  file.
+  Generate all configured icon sets:
 
-  Releases are only downloaded once. To discard the cached release and download
-  it again, run:
+      $ mix ex_icon.gen.icons
 
-      mix ex_icon.gen.icons --force
+  Generate a single icon set and download its release again:
 
-  Combine `--force` with `--icon-set` to only refresh a single icon set.
+      $ mix ex_icon.gen.icons --icon-set lucide --force
 
-  To read the configuration from a different file, run:
+  Read the configuration from a different path:
 
-      mix ex_icon.gen.icons --config config/icons.exs
-
-  Paths in the configuration file stay relative to the folder the task is run
-  in.
-
-  Releases are cached in the Mix cache folder. To cache them in a different
-  folder, pass the `--cache-dir` argument:
-
-      mix ex_icon.gen.icons --cache-dir .cache/ex_icon
+      $ mix ex_icon.gen.icons --config config/icons.exs
   """
 
   use Mix.Task
