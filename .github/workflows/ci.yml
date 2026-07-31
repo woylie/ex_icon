@@ -12,14 +12,18 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   tests_coverage:
     runs-on: ubuntu-24.04
     name: Test Coverage
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: erlef/setup-beam@fc68ffb90438ef2936bbb3251622353b3dcb2f93 # v1.24.0
         id: beam
         with:
@@ -37,13 +41,16 @@ jobs:
         run: |
           mix local.rebar --force
           mix local.hex --force
-          mix deps.get
+          mix deps.get --check-locked
       - name: Run Tests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: mix coveralls.github --warnings-as-errors
 
   tests:
     runs-on: ubuntu-24.04
     name: OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+    timeout-minutes: 15
     strategy:
       matrix:
         include:
@@ -53,11 +60,11 @@ jobs:
           - { elixir: "1.20", otp: 27 }
           - { elixir: "1.20", otp: 28 }
           - { elixir: "1.20", otp: 29 }
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: erlef/setup-beam@fc68ffb90438ef2936bbb3251622353b3dcb2f93 # v1.24.0
         id: beam
         with:
@@ -75,7 +82,7 @@ jobs:
         run: |
           mix local.rebar --force
           mix local.hex --force
-          mix deps.get
+          mix deps.get --check-locked
       - name: Run Tests
         run: mix test
 
@@ -83,25 +90,23 @@ jobs:
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     name: Tests
+    timeout-minutes: 5
     needs:
       - tests
     steps:
-      - run: |
-          result="${{ needs.tests.result }}"
-          if [[ $result == "success" ]]; then
-            exit 0
-          else
-            exit 1
-          fi
+      - name: Test results
+        if: needs.tests.result != 'success'
+        run: exit 1
 
   code-quality:
     runs-on: ubuntu-24.04
     name: Code Quality
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: erlef/setup-beam@fc68ffb90438ef2936bbb3251622353b3dcb2f93 # v1.24.0
         id: beam
         with:
@@ -130,7 +135,7 @@ jobs:
         run: |
           mix local.rebar --force
           mix local.hex --force
-          mix deps.get
+          mix deps.get --check-locked
       - name: Compile
         run: mix compile --warnings-as-errors
       - name: Run Formatter
