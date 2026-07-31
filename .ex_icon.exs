@@ -47,6 +47,8 @@
   ],
   lucide_all: [
     icons: :all,
+    # icons to skip
+    exclude: ["arrow-left"],
     provider: ExIcon.Lucide,
     version: "1.8.0",
     module_path: "output/lucide_all.ex",
