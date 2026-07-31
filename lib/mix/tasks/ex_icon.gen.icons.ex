@@ -106,6 +106,8 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
     module_path = Keyword.fetch!(opts, :module_path)
 
     Mix.Generator.copy_template(template_path, module_path, assigns)
+
     Mix.Task.run("format", [module_path])
+    Mix.Task.reenable("format")
   end
 end
