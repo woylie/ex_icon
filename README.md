@@ -9,6 +9,7 @@ Generic icon library for Phoenix LiveView.
 - Icon library versions are set via configuration. Update your icons without
   updating this library.
 - Generate components for all icons or only the ones you need.
+- Customize the component attributes.
 - Dev-only dependency. The library is only used for generating icon modules.
 
 ## Installation
