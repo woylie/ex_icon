@@ -4,42 +4,44 @@
 
 ### Added
 
-- Add `--force` flag to `mix ex_icon.gen.icons`, which discards the cached
-  release and downloads it again.
-- Add `--config` flag to `mix ex_icon.gen.icons`, which reads the configuration
-  from the given path instead of `.ex_icon.exs`.
 - Add `default`, `values`, `required`, and `fixed` options to attribute
   configuration, which allows you more control over the attributes in the
   generated HEEx components.
-- Add provider for Heroicons.
-- Add `--cache-dir` flag to `mix ex_icon.gen.icons`, which caches releases in
-  the given folder instead of the Mix cache folder.
 - Add optional `c:ExIcon.Provider.variants/1` callback and `variants`
   configuration option for icon libraries that have multiple style variants.
+  Each variant is generated into a module of its own, from a single download.
+- Add provider for Heroicons, which has outlined and filled variants in
+  several sizes.
+- Add `--config`, `--force`, and `--cache-dir` arguments to
+  `mix ex_icon.gen.icons`. See `mix help ex_icon.gen.icons`.
 
 ### Changed
 
-- Cache downloaded releases in the Mix cache folder instead of downloading them
-  into a shared temporary folder on every run.
-- Prevent interrupted runs from leaving a partial release behind.
-- Add HTTP request timeouts.
 - Change the second element of the tuple returned by `ExIcon.transform_svg/2`
   from a list of `{name, default}` tuples to a list of `{name, options}` tuples,
   where the options are those of the generated component attribute.
+- Cache downloaded releases in the Mix cache folder instead of downloading them
+  into a shared temporary folder on every run.
+- Only move a release into the cache once it is complete, so that an
+  interrupted run does not leave a partial release behind.
+- Add connect and receive timeouts to the release download.
 
 ### Fixed
+
+- Keep the `aria-hidden` value set by an SVG file instead of always overwriting
+  it with `true`.
+- Apply configured attributes to SVG files that have no attributes at all.
+- Ignore folders with an `.svg` extension when generating all icons of a
+  release.
+- Do not ask to overwrite generated modules that have not changed.
+- Format all generated modules instead of only the first one.
+
+### Security
 
 - Escape SVG attribute values in the generated module. Previously, an attribute
   value containing `#{}` was written into the generated component code
   unescaped, where it would be evaluated during compilation.
 - Refuse release archives with entries pointing outside the target folder.
-- Keep the `aria-hidden` value set by an SVG file instead of always overwriting
-  it with `true`.
-- Apply configured attributes to SVG files that have no attributes at all.
-- Format all generated modules instead of only the first one.
-- Do not ask to overwrite generated modules that have not changed.
-- Ignore folders with an `.svg` extension when generating all icons of a
-  release.
 
 ## [0.3.0] - 2026-04-10
 
