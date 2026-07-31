@@ -82,10 +82,9 @@ defmodule ExIcon.MixProject do
       source_ref: @version,
       skip_undefined_reference_warnings_on: ["CHANGELOG.md"],
       groups_for_modules: [
-        Providers: [
-          ExIcon.Lucide,
-          ExIcon.SimpleIcons
-        ]
+        Providers: fn metadata ->
+          ExIcon.Provider in Map.get(metadata, :behaviours, [])
+        end
       ]
     ]
   end
