@@ -548,16 +548,24 @@ defmodule ExIcon do
   end
 
   defp available_variants!(provider, version) do
-    if Code.ensure_loaded?(provider) and
-         function_exported?(provider, :variants, 1) do
-      provider.variants(version)
-    else
-      raise ArgumentError, """
-      the :variants option is not supported by #{inspect(provider)}
+    cond do
+      not Code.ensure_loaded?(provider) ->
+        raise ArgumentError, """
+        could not load the provider #{inspect(provider)}
 
-      Only providers that implement the optional variants/1 callback of the
-      ExIcon.Provider behaviour have variants to choose from.
-      """
+        Make sure the module exists and is compiled.
+        """
+
+      not function_exported?(provider, :variants, 1) ->
+        raise ArgumentError, """
+        the :variants option is not supported by #{inspect(provider)}
+
+        Only providers that implement the optional variants/1 callback of the
+        ExIcon.Provider behaviour have variants to choose from.
+        """
+
+      true ->
+        provider.variants(version)
     end
   end
 

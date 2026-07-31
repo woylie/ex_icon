@@ -609,6 +609,19 @@ defmodule ExIconTest do
       end
     end
 
+    test "raises if the provider cannot be loaded" do
+      assert_raise ArgumentError, ~r/could not load the provider/, fn ->
+        ExIcon.targets(
+          icons: :all,
+          provider: NoSuchProvider,
+          version: "1.0.0",
+          module_path: "lib/components/icons.ex",
+          module_name: MyAppWeb.Components.Icons,
+          variants: [:outline]
+        )
+      end
+    end
+
     test "raises if the provider has no variants" do
       assert_raise ArgumentError, ~r/not supported by ExIcon.Lucide/, fn ->
         ExIcon.targets(
