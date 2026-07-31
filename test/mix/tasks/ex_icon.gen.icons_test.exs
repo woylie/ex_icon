@@ -101,6 +101,35 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
              "def bell(assigns) do"
   end
 
+  test "does not write modules that are unchanged", %{tmp_dir: tmp_dir} do
+    config_path = write_config(tmp_dir, icons: icon_set(tmp_dir))
+
+    assert run(config_path) =~ "* writing"
+
+    output = run(config_path)
+
+    assert output =~ "is unchanged"
+    refute output =~ "* writing"
+  end
+
+  test "keeps a changed module if the overwrite is declined", %{
+    tmp_dir: tmp_dir
+  } do
+    config_path = write_config(tmp_dir, icons: icon_set(tmp_dir))
+    run(config_path)
+
+    module_path = Path.join(tmp_dir, "output/icons.ex")
+    File.write!(module_path, "# edited by hand\n")
+
+    output =
+      capture_io("n\n", fn ->
+        Mix.Task.rerun("ex_icon.gen.icons", ["--config", config_path])
+      end)
+
+    assert output =~ "skipping"
+    assert File.read!(module_path) == "# edited by hand\n"
+  end
+
   test "generates only the named icon set", %{tmp_dir: tmp_dir} do
     config_path =
       write_config(tmp_dir,

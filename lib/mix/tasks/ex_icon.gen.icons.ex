@@ -41,6 +41,8 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
 
   use Mix.Task
 
+  alias Mix.Tasks.Format
+
   @switches [
     strict: [
       config: :string,
@@ -135,9 +137,28 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
       |> ExIcon.prepare_assigns(opts)
       |> Keyword.put(:module_name, module_name)
 
-    Mix.Generator.copy_template(ExIcon.template_path(), module_path, assigns)
+    {formatter, _opts} = Format.formatter_for_file(module_path)
 
-    Mix.Task.run("format", [module_path])
-    Mix.Task.reenable("format")
+    contents =
+      ExIcon.template_path()
+      |> EEx.eval_file(assigns: assigns)
+      |> formatter.()
+
+    write_module(module_path, contents)
+  end
+
+  defp write_module(module_path, contents) do
+    relative_path = Path.relative_to_cwd(module_path)
+
+    cond do
+      File.read(module_path) == {:ok, contents} ->
+        IO.puts("* #{relative_path} is unchanged")
+
+      Mix.Generator.create_file(module_path, contents, quiet: true) ->
+        IO.puts("* writing #{relative_path}")
+
+      true ->
+        IO.puts("* skipping #{relative_path}")
+    end
   end
 end

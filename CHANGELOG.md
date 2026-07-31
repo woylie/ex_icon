@@ -37,6 +37,7 @@
   it with `true`.
 - Apply configured attributes to SVG files that have no attributes at all.
 - Format all generated modules instead of only the first one.
+- Do not ask to overwrite generated modules that have not changed.
 - Ignore folders with an `.svg` extension when generating all icons of a
   release.
 
