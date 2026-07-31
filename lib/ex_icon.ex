@@ -52,8 +52,8 @@ defmodule ExIcon do
 
       Example:
 
-      - `module_name`: MyApp.Components.Heroicons`
-      - `module_path`: "lib/my_app_web/components/heroicons.ex"`
+      - `module_name`: `MyApp.Components.Heroicons`
+      - `module_path`: `"lib/my_app_web/components/heroicons.ex"`
       - generated module name for the `:outline` variant:
         `MyApp.Components.Heroicons.Outline`
       - path of the module for the `:outline` variant:

@@ -183,9 +183,13 @@ heroicons: [
 ]
 ```
 
-Each variant is generated into a separate module. In this example, the modules
-`MyAppWeb.Components.Heroicons.Outline` and
-`MyAppWeb.Components.Heroicons.Solid` are generated.
+Each variant is generated into a separate module, with the variant appended to
+`module_name` and `module_path`. In this example, ExIcon generates
+`MyAppWeb.Components.Heroicons.Outline` into
+`lib/my_app_web/components/heroicons/outline.ex` and
+`MyAppWeb.Components.Heroicons.Solid` into
+`lib/my_app_web/components/heroicons/solid.ex`. No module is written to the
+configured `module_path` itself.
 
 ## Providers
 

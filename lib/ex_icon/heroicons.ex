@@ -12,10 +12,10 @@ defmodule ExIcon.Heroicons do
   - `:mini` - filled icons on a 20x20 viewbox
   - `:micro` - filled icons on a 16x16 viewbox
 
-  Note that the outlined icons have `stroke` and `stroke-width` attributes,
-  while the filled ones have a `fill` attribute instead. Attributes that a
-  variant does not have are ignored, so a single `attrs` option can cover all
-  of them.
+  Note that the variants differ in their attributes. The outlined icons have
+  `stroke` and `stroke-width` attributes and a `fill` of `none`, while the
+  filled ones only have a `fill` of `currentColor`. Attributes that a variant
+  does not have are ignored, so a single `attrs` option can cover all of them.
 
   Not every icon is available in every variant.
   """

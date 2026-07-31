@@ -5,8 +5,8 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
   Downloads and generates all icons.
 
   By default, the task attempts to read the configuration file `.ex_icon.exs`
-  in folder it is run in. You can choose a different path with the `--config`
-  argument.
+  in the folder it is run in. You can choose a different path with the
+  `--config` argument.
 
   ## Usage
 
@@ -26,7 +26,7 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
 
       mix ex_icon.gen.icons --force
 
-  Both flags can be combined to only refresh a single icon set.
+  Combine `--force` with `--icon-set` to only refresh a single icon set.
 
   To read the configuration from a different file, run:
 
