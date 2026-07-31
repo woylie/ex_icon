@@ -204,6 +204,52 @@ defmodule ExIconTest do
   end
 
   describe "template rendering" do
+    test "generates the component documented in the readme" do
+      svg = """
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+      >
+        <path d="m12 19-7-7 7-7" />
+      </svg>
+      """
+
+      attrs = [
+        "stroke",
+        {"stroke-width", default: "1.5"},
+        {"stroke-linecap", values: ["square", "round"]},
+        {"class", required: true},
+        {"stroke-dasharray", default: nil},
+        {"fill", fixed: "none"}
+      ]
+
+      {transformed, component_attrs} = ExIcon.transform_svg(svg, attrs)
+
+      declarations =
+        Enum.map_join(component_attrs, "\n", fn {name, opts} ->
+          "attr :#{name}, :string, #{ExIcon.render_attr_options(opts)}"
+        end)
+
+      assert declarations == """
+             attr :stroke, :string, default: "currentColor"
+             attr :stroke_width, :string, default: "1.5"
+             attr :stroke_linecap, :string, values: ["square", "round"], default: "round"
+             attr :class, :string, required: true
+             attr :stroke_dasharray, :string, default: nil\
+             """
+
+      assert transformed =~
+               ~s(<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" ) <>
+                 ~s(viewBox="0 0 24 24" stroke={@stroke} stroke-width={@stroke_width} ) <>
+                 ~s(stroke-linecap={@stroke_linecap} class={@class} ) <>
+                 ~s(stroke-dasharray={@stroke_dasharray} fill="none" aria-hidden="true">)
+    end
+
     test "renders attribute values as string literals" do
       assert render_attr({"stroke", [default: "currentColor"]}) =~
                ~S|attr :stroke, :string, default: "currentColor"|
