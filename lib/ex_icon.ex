@@ -6,8 +6,6 @@ defmodule ExIcon do
   use directly.
   """
 
-  @default_config_path ".ex_icon.exs"
-
   @options_schema [
     icons: [
       type: {:or, [{:list, :string}, {:in, [:all]}]},
@@ -745,7 +743,7 @@ defmodule ExIcon do
   end
 
   @doc false
-  def read_config(path \\ @default_config_path) when is_binary(path) do
+  def read_config(path) when is_binary(path) do
     with {:ok, file} <- File.read(path) do
       {config, _} = Code.eval_string(file)
       validate_config(config)

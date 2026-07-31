@@ -6,6 +6,8 @@
 
 - Add `--force` flag to `mix ex_icon.gen.icons`, which discards the cached
   release and downloads it again.
+- Add `--config` flag to `mix ex_icon.gen.icons`, which reads the configuration
+  from the given path instead of `.ex_icon.exs`.
 - Add `default`, `values`, `required`, and `fixed` options to attribute
   configuration, which allows you more control over the attributes in the
   generated HEEx components.

@@ -26,7 +26,8 @@ end
 
 ## Usage
 
-ExIcon expects a configuration file named `.ex_icon.exs`.
+ExIcon expects a configuration file named `.ex_icon.exs` in your project root.
+Pass `--config` to read it from a different path.
 
 ```elixir
 [
@@ -73,6 +74,14 @@ mix ex_icon.gen.icons --force
 
 You can override the default cache folder with the `EX_ICON_CACHE_DIR`
 environment variable.
+
+To read the configuration from a path other than `.ex_icon.exs`, run:
+
+```bash
+mix ex_icon.gen.icons --config config/icons.exs
+```
+
+Paths in the configuration file stay relative to the folder you run the task in.
 
 ## Attributes
 

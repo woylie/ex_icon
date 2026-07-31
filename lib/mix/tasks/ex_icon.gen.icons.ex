@@ -4,7 +4,9 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
   @moduledoc """
   Downloads and generates all icons.
 
-  The task expects the configuration file `.ex_icon.exs` to exist.
+  By default, the task attempts to read the configuration file `.ex_icon.exs`
+  in folder it is run in. You can choose a different path with the `--config`
+  argument.
 
   ## Usage
 
@@ -26,6 +28,13 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
 
   Both flags can be combined to only refresh a single icon set.
 
+  To read the configuration from a different file, run:
+
+      mix ex_icon.gen.icons --config config/icons.exs
+
+  Paths in the configuration file stay relative to the folder the task is run
+  in.
+
   Releases are cached in the Mix cache folder. Set the `EX_ICON_CACHE_DIR`
   environment variable to cache them in a different folder.
   """
@@ -34,18 +43,20 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
 
   @switches [
     strict: [
+      config: :string,
       icon_set: :string,
       force: :boolean
     ]
   ]
 
+  @default_config_path ".ex_icon.exs"
   @cache_dir "ex_icon"
 
   @impl Mix.Task
   def run(args) do
     {opts, []} = OptionParser.parse!(args, @switches)
 
-    case ExIcon.read_config() do
+    case ExIcon.read_config(opts[:config] || @default_config_path) do
       {:ok, config} ->
         cache_dir = cache_dir()
         do_run(config, cache_dir, opts[:icon_set], opts[:force] == true)

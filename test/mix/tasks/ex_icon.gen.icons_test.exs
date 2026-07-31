@@ -1,7 +1,5 @@
 defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
-  # async: false because the config is read from the current working directory
-  # and tests need to change the folder
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   import ExUnit.CaptureIO
 
@@ -21,17 +19,25 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
     def variants(_), do: %{plain: "icons", nested: "icons/nested"}
   end
 
-  setup %{tmp_dir: tmp_dir} do
-    cache_dir = Path.join(tmp_dir, "cache")
+  setup_all do
+    cache_dir = Path.join(System.tmp_dir!(), "ex_icon_gen_icons_test")
     svg_dir = Path.join([cache_dir, "test_provider", "1.0.0", "icons"])
+
+    File.rm_rf!(cache_dir)
     File.mkdir_p!(Path.join(svg_dir, "nested"))
     File.write!(Path.join(svg_dir, "arrow-left.svg"), svg())
     File.write!(Path.join([svg_dir, "nested", "bell.svg"]), svg())
 
-    System.put_env("EX_ICON_CACHE_DIR", cache_dir)
-    on_exit(fn -> System.delete_env("EX_ICON_CACHE_DIR") end)
+    on_exit(fn ->
+      System.delete_env("EX_ICON_CACHE_DIR")
+      File.rm_rf!(cache_dir)
+    end)
 
     %{cache_dir: cache_dir}
+  end
+
+  setup %{cache_dir: cache_dir} do
+    System.put_env("EX_ICON_CACHE_DIR", cache_dir)
   end
 
   defp svg do
@@ -39,32 +45,34 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
   end
 
   defp write_config(tmp_dir, config) do
-    File.write!(Path.join(tmp_dir, ".ex_icon.exs"), inspect(config))
+    path = Path.join(tmp_dir, "icons.exs")
+    File.write!(path, inspect(config))
+    path
   end
 
-  defp icon_set(extra \\ []) do
+  defp icon_set(tmp_dir, extra \\ []) do
     Keyword.merge(
       [
         icons: ["arrow-left"],
         provider: TestProvider,
         version: "1.0.0",
-        module_path: "output/icons.ex",
+        module_path: Path.join(tmp_dir, "output/icons.ex"),
         module_name: MyAppWeb.Components.Icons
       ],
       extra
     )
   end
 
-  defp run(tmp_dir, args) do
-    File.cd!(tmp_dir, fn ->
-      capture_io(fn -> Mix.Task.rerun("ex_icon.gen.icons", args) end)
+  defp run(config_path, args \\ []) do
+    capture_io(fn ->
+      Mix.Task.rerun("ex_icon.gen.icons", ["--config", config_path] ++ args)
     end)
   end
 
   test "generates the configured module", %{tmp_dir: tmp_dir} do
-    write_config(tmp_dir, icons: icon_set())
+    config_path = write_config(tmp_dir, icons: icon_set(tmp_dir))
 
-    output = run(tmp_dir, [])
+    output = run(config_path)
 
     assert output =~ "Processing icons..."
     assert output =~ "Generating MyAppWeb.Components.Icons..."
@@ -76,11 +84,12 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
   end
 
   test "generates a module per variant", %{tmp_dir: tmp_dir} do
-    write_config(tmp_dir,
-      icons: icon_set(icons: :all, variants: [:plain, :nested])
-    )
+    config_path =
+      write_config(tmp_dir,
+        icons: icon_set(tmp_dir, icons: :all, variants: [:plain, :nested])
+      )
 
-    output = run(tmp_dir, [])
+    output = run(config_path)
 
     assert output =~ "Generating MyAppWeb.Components.Icons.Plain..."
     assert output =~ "Generating MyAppWeb.Components.Icons.Nested..."
@@ -93,12 +102,17 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
   end
 
   test "generates only the named icon set", %{tmp_dir: tmp_dir} do
-    write_config(tmp_dir,
-      icons: icon_set(),
-      other: icon_set(module_path: "output/other.ex", module_name: Other)
-    )
+    config_path =
+      write_config(tmp_dir,
+        icons: icon_set(tmp_dir),
+        other:
+          icon_set(tmp_dir,
+            module_path: Path.join(tmp_dir, "output/other.ex"),
+            module_name: Other
+          )
+      )
 
-    output = run(tmp_dir, ["--icon-set", "other"])
+    output = run(config_path, ["--icon-set", "other"])
 
     refute output =~ "Processing icons..."
     assert output =~ "Processing other..."
@@ -107,9 +121,42 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
   end
 
   test "reports the cache folder", %{tmp_dir: tmp_dir, cache_dir: cache_dir} do
-    write_config(tmp_dir, icons: icon_set())
+    config_path = write_config(tmp_dir, icons: icon_set(tmp_dir))
 
-    assert run(tmp_dir, []) =~ cache_dir
+    assert run(config_path) =~ cache_dir
+  end
+
+  test "exits if the named icon set does not exist", %{tmp_dir: tmp_dir} do
+    config_path = write_config(tmp_dir, icons: icon_set(tmp_dir))
+
+    output =
+      capture_io(fn ->
+        assert catch_exit(
+                 Mix.Task.rerun("ex_icon.gen.icons", [
+                   "--config",
+                   config_path,
+                   "--icon-set",
+                   "nope"
+                 ])
+               ) == {:shutdown, 1}
+      end)
+
+    assert output =~ "Icon set nope not found in configuration."
+    assert output =~ "[:icons]"
+  end
+
+  test "exits if the configuration file does not exist", %{tmp_dir: tmp_dir} do
+    config_path = Path.join(tmp_dir, "does-not-exist.exs")
+
+    output =
+      capture_io(fn ->
+        assert catch_exit(
+                 Mix.Task.rerun("ex_icon.gen.icons", ["--config", config_path])
+               ) == {:shutdown, 1}
+      end)
+
+    assert output =~ "An error occurred."
+    assert output =~ ":enoent"
   end
 
   describe "cache_dir/0" do
@@ -125,35 +172,5 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
 
       assert Mix.Tasks.ExIcon.Gen.Icons.cache_dir() == "/tmp/ex_icon_cache"
     end
-  end
-
-  test "exits if the named icon set does not exist", %{tmp_dir: tmp_dir} do
-    write_config(tmp_dir, icons: icon_set())
-
-    output =
-      capture_io(fn ->
-        assert catch_exit(
-                 File.cd!(tmp_dir, fn ->
-                   Mix.Task.rerun("ex_icon.gen.icons", ["--icon-set", "nope"])
-                 end)
-               ) == {:shutdown, 1}
-      end)
-
-    assert output =~ "Icon set nope not found in configuration."
-    assert output =~ "[:icons]"
-  end
-
-  test "exits if the configuration file is missing", %{tmp_dir: tmp_dir} do
-    output =
-      capture_io(fn ->
-        assert catch_exit(
-                 File.cd!(tmp_dir, fn ->
-                   Mix.Task.rerun("ex_icon.gen.icons", [])
-                 end)
-               ) == {:shutdown, 1}
-      end)
-
-    assert output =~ "An error occurred."
-    assert output =~ ":enoent"
   end
 end
