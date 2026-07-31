@@ -45,7 +45,6 @@
 - Escape SVG attribute values in the generated module. Previously, an attribute
   value containing `#{}` was written into the generated component code
   unescaped, where it would be evaluated during compilation.
-- Refuse release archives with entries pointing outside the target folder.
 - Skip icons whose names cannot be turned into function names. Previously, a
   file name in a release was written into the generated module unchecked, where
   it could add arbitrary code.

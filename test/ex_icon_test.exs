@@ -976,8 +976,8 @@ defmodule ExIconTest do
                "<svg></svg>"
     end
 
-    test "raises if the archive cannot be read", %{tmp_dir: tmp_dir} do
-      assert_raise RuntimeError, ~r/Unable to read zip archive/, fn ->
+    test "raises if the archive is not a zip file", %{tmp_dir: tmp_dir} do
+      assert_raise RuntimeError, ~r/Unable to unpack zip archive/, fn ->
         ExIcon.unpack_archive!("not a zip archive", tmp_dir)
       end
     end
@@ -995,34 +995,38 @@ defmodule ExIconTest do
       end
     end
 
-    test "refuses entries that escape the target folder", %{tmp_dir: tmp_dir} do
+    @tag :capture_log
+    test "keeps traversing entries inside the target folder", %{
+      tmp_dir: tmp_dir
+    } do
       zip =
         build_zip([
-          {~c"icons/arrow-left.svg", "<svg></svg>"},
-          {~c"../escaped.svg", "<svg></svg>"}
+          {~c"../escaped.svg", "<svg></svg>"},
+          {~c"icons/../../escaped-too.svg", "<svg></svg>"},
+          {~c"./../escaped-again.svg", "<svg></svg>"}
         ])
 
       target = Path.join(tmp_dir, "target")
       File.mkdir_p!(target)
 
-      assert_raise RuntimeError, ~r/would be written outside/, fn ->
-        ExIcon.unpack_archive!(zip, target)
-      end
+      assert ExIcon.unpack_archive!(zip, target) == :ok
 
-      assert File.ls!(target) == []
-      refute File.exists?(Path.join(tmp_dir, "escaped.svg"))
+      assert Enum.sort(File.ls!(target)) ==
+               ["escaped-again.svg", "escaped-too.svg", "escaped.svg"]
+
+      assert File.ls!(tmp_dir) == ["target"]
     end
 
-    test "refuses entries with an absolute path", %{tmp_dir: tmp_dir} do
+    @tag :capture_log
+    test "keeps absolute entries inside the target folder", %{tmp_dir: tmp_dir} do
       zip = build_zip_with_absolute_entry()
       target = Path.join(tmp_dir, "target")
       File.mkdir_p!(target)
 
-      assert_raise RuntimeError, ~r/would be written outside/, fn ->
-        ExIcon.unpack_archive!(zip, target)
-      end
+      assert ExIcon.unpack_archive!(zip, target) == :ok
 
-      assert File.ls!(target) == []
+      assert File.exists?(Path.join([target, "abs", "escaped.svg"]))
+      assert File.ls!(tmp_dir) == ["target"]
     end
   end
 
