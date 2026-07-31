@@ -182,6 +182,7 @@ Each variant is generated into a separate module. In this example, the modules
 Providers for specific icon libraries are based on the `ExIcon.Provider`
 behaviour. The library currently supports these providers:
 
+- [Heroicons](https://heroicons.com/)
 - [Lucide](https://lucide.dev/)
 - [Simple Icons](https://simpleicons.org/)
 
