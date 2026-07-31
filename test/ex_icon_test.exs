@@ -501,6 +501,67 @@ defmodule ExIconTest do
     end
   end
 
+  describe "targets/1" do
+    test "returns a single target without variants" do
+      assert ExIcon.targets(
+               icons: :all,
+               provider: ExIcon.Lucide,
+               version: "1.8.0",
+               module_path: "lib/components/lucide.ex",
+               module_name: MyAppWeb.Components.Lucide
+             ) ==
+               [
+                 {"icons", MyAppWeb.Components.Lucide,
+                  "lib/components/lucide.ex"}
+               ]
+    end
+
+    test "returns a target per configured variant" do
+      assert ExIcon.targets(
+               icons: :all,
+               provider: ExIcon.Heroicons,
+               version: "2.2.0",
+               module_path: "lib/components/heroicons.ex",
+               module_name: MyAppWeb.Components.Heroicons,
+               variants: [:outline, :mini]
+             ) ==
+               [
+                 {"heroicons-2.2.0/optimized/24/outline",
+                  MyAppWeb.Components.Heroicons.Outline,
+                  "lib/components/heroicons/outline.ex"},
+                 {"heroicons-2.2.0/optimized/20/solid",
+                  MyAppWeb.Components.Heroicons.Mini,
+                  "lib/components/heroicons/mini.ex"}
+               ]
+    end
+
+    test "raises for an unknown variant" do
+      assert_raise ArgumentError, ~r/unknown variant :outlined/, fn ->
+        ExIcon.targets(
+          icons: :all,
+          provider: ExIcon.Heroicons,
+          version: "2.2.0",
+          module_path: "lib/components/heroicons.ex",
+          module_name: MyAppWeb.Components.Heroicons,
+          variants: [:outlined]
+        )
+      end
+    end
+
+    test "raises if the provider has no variants" do
+      assert_raise ArgumentError, ~r/not supported by ExIcon.Lucide/, fn ->
+        ExIcon.targets(
+          icons: :all,
+          provider: ExIcon.Lucide,
+          version: "1.8.0",
+          module_path: "lib/components/lucide.ex",
+          module_name: MyAppWeb.Components.Lucide,
+          variants: [:outline]
+        )
+      end
+    end
+  end
+
   describe "download/2" do
     @describetag :tmp_dir
 
@@ -515,11 +576,12 @@ defmodule ExIconTest do
         module_name: MyAppWeb.Components.Lucide
       ]
 
-      svg_dir = Path.join([tmp_dir, "lucide", "1.8.0", "icons"])
+      icon_dir = Path.join([tmp_dir, "lucide", "1.8.0"])
+      svg_dir = Path.join(icon_dir, "icons")
       File.mkdir_p!(svg_dir)
       File.write!(Path.join(svg_dir, "cached.svg"), "<svg></svg>")
 
-      assert ExIcon.download(tmp_dir, opts) == svg_dir
+      assert ExIcon.download(tmp_dir, opts) == icon_dir
       assert File.read!(Path.join(svg_dir, "cached.svg")) == "<svg></svg>"
     end
 
@@ -532,10 +594,11 @@ defmodule ExIconTest do
         module_name: MyAppWeb.Components.Icons
       ]
 
-      svg_dir = Path.join([tmp_dir, "unreachable_provider", "1.0.0", "icons"])
+      icon_dir = Path.join([tmp_dir, "unreachable_provider", "1.0.0"])
+      svg_dir = Path.join(icon_dir, "icons")
       File.mkdir_p!(svg_dir)
 
-      assert ExIcon.download(tmp_dir, opts) == svg_dir
+      assert ExIcon.download(tmp_dir, opts) == icon_dir
 
       capture_io(fn ->
         assert_raise RuntimeError, ~r/unable to fetch icons/, fn ->
@@ -647,7 +710,10 @@ defmodule ExIconTest do
       path = Path.join(tmp_dir, ".ex_icon.exs")
       File.write!(path, inspect(config))
 
-      assert ExIcon.read_config(path) == {:ok, config}
+      assert {:ok, [lucide: read_config]} = ExIcon.read_config(path)
+      assert Keyword.get(read_config, :icons) == ["arrow-left", "arrow-right"]
+      assert Keyword.get(read_config, :attrs) == ["stroke"]
+      assert Keyword.get(read_config, :variants) == []
     end
 
     test "returns error if file is not found", %{tmp_dir: tmp_dir} do

@@ -43,7 +43,10 @@ ExIcon expects a configuration file named `.ex_icon.exs`.
     module_name: MyAppWeb.Components.Lucide,
     # SVG attributes to turn into component attributes, to override, or to add.
     # Example: ["stroke", {"stroke-width", default: "1.5"}]
-    attrs: []
+    attrs: [],
+    # If supported by the provider, choose the style variants to generate
+    # Example: [:outline, :solid]
+    variants: []
   ]
 ]
 ```
@@ -148,6 +151,28 @@ end
 
 Note that if you generate a lot of icons, compilation times can increase
 substantially by adding component attributes.
+
+## Variants
+
+Some icon libraries ship the same icons in multiple styles. For example,
+Heroicons has outlined and filled icons in several sizes. Select the ones you
+need with the `variants` option:
+
+```elixir
+heroicons: [
+  icons: ["academic-cap", "bell"],
+  provider: ExIcon.Heroicons,
+  version: "2.2.0",
+  module_path: "lib/my_app_web/components/heroicons.ex",
+  module_name: MyAppWeb.Components.Heroicons,
+  variants: [:outline, :solid],
+  attrs: ["stroke", "stroke-width", "fill"]
+]
+```
+
+Each variant is generated into a separate module. In this example, the modules
+`MyAppWeb.Components.Heroicons.Outline` and
+`MyAppWeb.Components.Heroicons.Solid` are generated.
 
 ## Providers
 

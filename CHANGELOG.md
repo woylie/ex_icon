@@ -9,6 +9,8 @@
 - Add `default`, `values`, `required`, and `fixed` options to attribute
   configuration, which allows you more control over the attributes in the
   generated HEEx components.
+- Add optional `c:ExIcon.Provider.variants/1` callback and `variants`
+  configuration option for icon libraries that have multiple style variants.
 
 ### Changed
 

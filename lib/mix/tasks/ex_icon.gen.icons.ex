@@ -96,16 +96,24 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
 
   defp download_and_generate({config_name, opts}, cache_dir, force?) do
     IO.puts("Processing #{config_name}...")
-    svg_dir = ExIcon.download(cache_dir, opts, force: force?)
 
-    IO.puts("Preparing assigns for #{config_name}...")
-    assigns = ExIcon.prepare_assigns(svg_dir, opts)
+    targets = ExIcon.targets(opts)
+    icon_dir = ExIcon.download(cache_dir, opts, force: force?)
 
-    IO.puts("Generating module for #{config_name}...")
-    template_path = ExIcon.template_path()
-    module_path = Keyword.fetch!(opts, :module_path)
+    Enum.each(targets, fn {svg_folder, module_name, module_path} ->
+      generate(Path.join(icon_dir, svg_folder), module_name, module_path, opts)
+    end)
+  end
 
-    Mix.Generator.copy_template(template_path, module_path, assigns)
+  defp generate(svg_dir, module_name, module_path, opts) do
+    IO.puts("Generating #{inspect(module_name)}...")
+
+    assigns =
+      svg_dir
+      |> ExIcon.prepare_assigns(opts)
+      |> Keyword.put(:module_name, module_name)
+
+    Mix.Generator.copy_template(ExIcon.template_path(), module_path, assigns)
 
     Mix.Task.run("format", [module_path])
     Mix.Task.reenable("format")

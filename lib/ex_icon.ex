@@ -41,6 +41,30 @@ defmodule ExIcon do
       doc:
         "The name of the generated module. Example: `MyApp.Components.Lucide`."
     ],
+    variants: [
+      type: {:list, :atom},
+      required: false,
+      default: [],
+      doc: """
+      The variants of the icon library to generate, for providers that
+      implement `c:ExIcon.Provider.variants/1`. Example: `[:outline, :solid]`.
+
+      Each variant is generated into a separate module, with the variant
+      appended to `module_name` and `module_path`.
+
+      Example:
+
+      - `module_name`: MyApp.Components.Heroicons`
+      - `module_path`: "lib/my_app_web/components/heroicons.ex"`
+      - generated module name for the `:outline` variant:
+        `MyApp.Components.Heroicons.Outline`
+      - path of the module for the `:outline` variant:
+        `lib/my_app_web/components/heroicons/outline.ex`
+
+      Defaults to an empty list, which generates a single module from
+      `c:ExIcon.Provider.svg_folder/1`.
+      """
+    ],
     attrs: [
       type: {:custom, __MODULE__, :validate_attrs, []},
       type_doc: "list of `t:String.t/0` or `{t:String.t/0, keyword}`",
@@ -494,12 +518,74 @@ defmodule ExIcon do
     provider_name = provider_name(provider)
 
     icon_dir = Path.join([cache_dir, provider_name, version])
-    svg_dir = Path.join(icon_dir, provider.svg_folder(version))
 
     if Keyword.get(download_opts, :force, false), do: File.rm_rf!(icon_dir)
     if !File.dir?(icon_dir), do: fill_cache!(icon_dir, provider, version)
 
-    svg_dir
+    icon_dir
+  end
+
+  @doc false
+  def targets(opts) do
+    provider = Keyword.fetch!(opts, :provider)
+    version = Keyword.fetch!(opts, :version)
+    module_name = Keyword.fetch!(opts, :module_name)
+    module_path = Keyword.fetch!(opts, :module_path)
+
+    case Keyword.get(opts, :variants, []) do
+      [] ->
+        [{provider.svg_folder(version), module_name, module_path}]
+
+      variants ->
+        available = available_variants!(provider, version)
+
+        Enum.map(variants, fn variant ->
+          {fetch_variant!(available, variant, provider),
+           Module.concat(module_name, variant_alias(variant)),
+           variant_module_path(module_path, variant)}
+        end)
+    end
+  end
+
+  defp available_variants!(provider, version) do
+    if Code.ensure_loaded?(provider) and
+         function_exported?(provider, :variants, 1) do
+      provider.variants(version)
+    else
+      raise ArgumentError, """
+      the :variants option is not supported by #{inspect(provider)}
+
+      Only providers that implement the optional variants/1 callback of the
+      ExIcon.Provider behaviour have variants to choose from.
+      """
+    end
+  end
+
+  defp fetch_variant!(available, variant, provider) do
+    case Map.fetch(available, variant) do
+      {:ok, folder} ->
+        folder
+
+      :error ->
+        raise ArgumentError, """
+        unknown variant #{inspect(variant)} for #{inspect(provider)}
+
+        Available variants: #{inspect(Enum.sort(Map.keys(available)))}
+        """
+    end
+  end
+
+  defp variant_alias(variant) do
+    variant |> Atom.to_string() |> Macro.camelize()
+  end
+
+  defp variant_module_path(module_path, variant) do
+    extension = Path.extname(module_path)
+
+    Path.join(
+      Path.rootname(module_path, extension),
+      "#{variant}#{extension}"
+    )
   end
 
   defp fill_cache!(icon_dir, provider, version) do
