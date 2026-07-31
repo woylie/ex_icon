@@ -18,17 +18,25 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
 
   The value must reference one of the top level keys in your configuration
   file.
+
+  Releases are only downloaded once. To discard the cached release and download
+  it again, run:
+
+      mix ex_icon.gen.icons --force
+
+  Both flags can be combined to only refresh a single icon set.
   """
 
   use Mix.Task
 
   @switches [
     strict: [
-      icon_set: :string
+      icon_set: :string,
+      force: :boolean
     ]
   ]
 
-  @tmp_dir "ex_icon"
+  @cache_dir "ex_icon"
 
   @impl Mix.Task
   def run(args) do
@@ -36,9 +44,18 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
 
     case ExIcon.read_config() do
       {:ok, config} ->
-        tmp_dir = Path.join([System.tmp_dir!(), @tmp_dir])
-        do_run(config, tmp_dir, opts[:icon_set])
-        IO.puts("Done.")
+        cache_dir = Path.join(Mix.Utils.mix_cache(), @cache_dir)
+        do_run(config, cache_dir, opts[:icon_set], opts[:force] == true)
+
+        IO.puts("""
+        Done.
+
+        Downloaded releases are cached in:
+
+            #{cache_dir}
+
+        Pass --force to download them again.
+        """)
 
       {:error, reason} ->
         IO.puts("""
@@ -51,15 +68,15 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
     end
   end
 
-  defp do_run(config, tmp_dir, nil) do
-    download_and_generate_all(config, tmp_dir)
+  defp do_run(config, cache_dir, nil, force?) do
+    download_and_generate_all(config, cache_dir, force?)
   end
 
-  defp do_run(config, tmp_dir, icon_set) when is_binary(icon_set) do
+  defp do_run(config, cache_dir, icon_set, force?) when is_binary(icon_set) do
     icon_set = String.to_atom(icon_set)
 
     if opts = Keyword.get(config, icon_set) do
-      download_and_generate({icon_set, opts}, tmp_dir)
+      download_and_generate({icon_set, opts}, cache_dir, force?)
     else
       IO.puts("""
       Icon set #{icon_set} not found in configuration.
@@ -73,15 +90,13 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
     end
   end
 
-  defp download_and_generate_all(config, tmp_dir) do
-    Enum.each(config, &download_and_generate(&1, tmp_dir))
-  after
-    File.rm_rf(tmp_dir)
+  defp download_and_generate_all(config, cache_dir, force?) do
+    Enum.each(config, &download_and_generate(&1, cache_dir, force?))
   end
 
-  defp download_and_generate({config_name, opts}, tmp_dir) do
-    IO.puts("Downloading icons for #{config_name}...")
-    svg_dir = ExIcon.download(tmp_dir, opts)
+  defp download_and_generate({config_name, opts}, cache_dir, force?) do
+    IO.puts("Processing #{config_name}...")
+    svg_dir = ExIcon.download(cache_dir, opts, force: force?)
 
     IO.puts("Preparing assigns for #{config_name}...")
     assigns = ExIcon.prepare_assigns(svg_dir, opts)

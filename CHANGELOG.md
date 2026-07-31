@@ -2,11 +2,24 @@
 
 ## Unreleased
 
+### Added
+
+- Add `--force` flag to `mix ex_icon.gen.icons`, which discards the cached
+  release and downloads it again.
+
+### Changed
+
+- Cache downloaded releases in the Mix cache folder instead of downloading them
+  into a shared temporary folder on every run.
+- Prevent interrupted runs from leaving a partial release behind.
+- Add HTTP request timeouts.
+
 ### Fixed
 
 - Escape SVG attribute values in the generated module. Previously, an attribute
   value containing `#{}` was written into the generated component code
   unescaped, where it would be evaluated during compilation.
+- Refuse release archives with entries pointing outside the target folder.
 
 ## [0.3.0] - 2026-04-10
 

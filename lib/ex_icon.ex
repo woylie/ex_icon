@@ -229,27 +229,60 @@ defmodule ExIcon do
   end
 
   @doc false
-  def download(tmp_dir, opts) do
+  def download(cache_dir, opts, download_opts \\ []) do
     provider = Keyword.fetch!(opts, :provider)
     version = Keyword.fetch!(opts, :version)
     provider_name = provider_name(provider)
 
-    tmp_dir = Path.join([tmp_dir, provider_name, version])
-    tmp_svg_dir = Path.join(tmp_dir, provider.svg_folder(version))
+    icon_dir = Path.join([cache_dir, provider_name, version])
+    svg_dir = Path.join(icon_dir, provider.svg_folder(version))
 
-    clear_folder!(tmp_dir)
+    if Keyword.get(download_opts, :force, false), do: File.rm_rf!(icon_dir)
+    if !File.dir?(icon_dir), do: fill_cache!(icon_dir, provider, version)
 
-    provider
-    |> download_icons!(version)
-    |> unpack_archive!(tmp_dir)
+    svg_dir
+  end
 
-    tmp_svg_dir
+  defp fill_cache!(icon_dir, provider, version) do
+    staging_dir = "#{icon_dir}.download-#{:erlang.unique_integer([:positive])}"
+
+    File.mkdir_p!(staging_dir)
+
+    try do
+      IO.puts("Downloading #{provider_name(provider)} #{version}...")
+
+      provider
+      |> download_icons!(version)
+      |> unpack_archive!(staging_dir)
+
+      File.mkdir_p!(Path.dirname(icon_dir))
+
+      case File.rename(staging_dir, icon_dir) do
+        :ok ->
+          :ok
+
+        {:error, reason} ->
+          if !File.dir?(icon_dir) do
+            raise """
+            Unable to move the downloaded icons into the cache
+
+            Tried moving '#{staging_dir}' to '#{icon_dir}', got:
+
+            #{inspect(reason)}
+            """
+          end
+      end
+    after
+      File.rm_rf(staging_dir)
+    end
   end
 
   defp download_icons!(provider, version) do
     url = version |> provider.release_url() |> String.to_charlist()
 
     http_opts = [
+      connect_timeout: :timer.seconds(30),
+      timeout: :timer.minutes(5),
       ssl: [
         verify: :verify_peer,
         cacerts: :public_key.cacerts_get(),
@@ -277,7 +310,10 @@ defmodule ExIcon do
     end
   end
 
-  defp unpack_archive!(zip, path) do
+  @doc false
+  def unpack_archive!(zip, path) do
+    reject_unsafe_entries!(zip)
+
     case :zip.extract(zip, [{:cwd, String.to_charlist(path)}]) do
       {:ok, _} ->
         :ok
@@ -291,9 +327,41 @@ defmodule ExIcon do
     end
   end
 
-  defp clear_folder!(path) do
-    File.rm_rf!(path)
-    File.mkdir_p!(path)
+  defp reject_unsafe_entries!(zip) do
+    case :zip.list_dir(zip) do
+      {:ok, entries} ->
+        case Enum.filter(entry_names(entries), &unsafe_path?/1) do
+          [] ->
+            :ok
+
+          unsafe_entries ->
+            raise """
+            Refusing to unpack zip archive
+
+            The archive contains entries that would be written outside the
+            target folder:
+
+            #{Enum.map_join(unsafe_entries, "\n", &"    #{&1}")}
+            """
+        end
+
+      result ->
+        raise """
+        Unable to read zip archive
+
+        #{inspect(result, pretty: true)}
+        """
+    end
+  end
+
+  defp entry_names(entries) do
+    for {:zip_file, name, _info, _comment, _offset, _comp_size} <- entries do
+      List.to_string(name)
+    end
+  end
+
+  defp unsafe_path?(name) do
+    Path.type(name) != :relative or ".." in Path.split(name)
   end
 
   @doc false
