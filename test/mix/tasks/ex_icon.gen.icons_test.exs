@@ -20,15 +20,12 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
   end
 
   setup %{tmp_dir: tmp_dir} do
-    cache_dir = Path.join(tmp_dir, "cache")
+    cache_dir = cache_dir(tmp_dir)
     svg_dir = Path.join([cache_dir, "test_provider", "1.0.0", "icons"])
 
     File.mkdir_p!(Path.join(svg_dir, "nested"))
     File.write!(Path.join(svg_dir, "arrow-left.svg"), svg())
     File.write!(Path.join([svg_dir, "nested", "bell.svg"]), svg())
-
-    System.put_env("EX_ICON_CACHE_DIR", cache_dir)
-    on_exit(fn -> System.delete_env("EX_ICON_CACHE_DIR") end)
 
     %{cache_dir: cache_dir}
   end
@@ -37,10 +34,18 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
     ~s(<svg stroke="currentColor"><path d="M19 12H5" /></svg>)
   end
 
+  defp cache_dir(tmp_dir), do: Path.join(tmp_dir, "cache")
+  defp config_path(tmp_dir), do: Path.join(tmp_dir, "icons.exs")
+
   defp write_config(tmp_dir, config) do
-    path = Path.join(tmp_dir, "icons.exs")
+    path = config_path(tmp_dir)
     File.write!(path, inspect(config))
     path
+  end
+
+  defp args(tmp_dir, extra \\ []) do
+    ["--config", config_path(tmp_dir), "--cache-dir", cache_dir(tmp_dir)] ++
+      extra
   end
 
   defp icon_set(tmp_dir, extra \\ []) do
@@ -56,16 +61,16 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
     )
   end
 
-  defp run(config_path, args \\ []) do
+  defp run(tmp_dir, extra \\ []) do
     capture_io(fn ->
-      Mix.Task.rerun("ex_icon.gen.icons", ["--config", config_path] ++ args)
+      Mix.Task.rerun("ex_icon.gen.icons", args(tmp_dir, extra))
     end)
   end
 
   test "generates the configured module", %{tmp_dir: tmp_dir} do
-    config_path = write_config(tmp_dir, icons: icon_set(tmp_dir))
+    write_config(tmp_dir, icons: icon_set(tmp_dir))
 
-    output = run(config_path)
+    output = run(tmp_dir)
 
     assert output =~ "Processing icons..."
     assert output =~ "Generating MyAppWeb.Components.Icons..."
@@ -77,12 +82,11 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
   end
 
   test "generates a module per variant", %{tmp_dir: tmp_dir} do
-    config_path =
-      write_config(tmp_dir,
-        icons: icon_set(tmp_dir, icons: :all, variants: [:plain, :nested])
-      )
+    write_config(tmp_dir,
+      icons: icon_set(tmp_dir, icons: :all, variants: [:plain, :nested])
+    )
 
-    output = run(config_path)
+    output = run(tmp_dir)
 
     assert output =~ "Generating MyAppWeb.Components.Icons.Plain..."
     assert output =~ "Generating MyAppWeb.Components.Icons.Nested..."
@@ -95,11 +99,11 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
   end
 
   test "does not write modules that are unchanged", %{tmp_dir: tmp_dir} do
-    config_path = write_config(tmp_dir, icons: icon_set(tmp_dir))
+    write_config(tmp_dir, icons: icon_set(tmp_dir))
 
-    assert run(config_path) =~ "* writing"
+    assert run(tmp_dir) =~ "* writing"
 
-    output = run(config_path)
+    output = run(tmp_dir)
 
     assert output =~ "is unchanged"
     refute output =~ "* writing"
@@ -108,15 +112,15 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
   test "keeps a changed module if the overwrite is declined", %{
     tmp_dir: tmp_dir
   } do
-    config_path = write_config(tmp_dir, icons: icon_set(tmp_dir))
-    run(config_path)
+    write_config(tmp_dir, icons: icon_set(tmp_dir))
+    run(tmp_dir)
 
     module_path = Path.join(tmp_dir, "output/icons.ex")
     File.write!(module_path, "# edited by hand\n")
 
     output =
       capture_io("n\n", fn ->
-        Mix.Task.rerun("ex_icon.gen.icons", ["--config", config_path])
+        Mix.Task.rerun("ex_icon.gen.icons", args(tmp_dir))
       end)
 
     assert output =~ "skipping"
@@ -126,33 +130,31 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
   test "discards a cached release only once per run with --force", %{
     tmp_dir: tmp_dir
   } do
-    config_path =
-      write_config(tmp_dir,
-        icons: icon_set(tmp_dir),
-        same_release:
-          icon_set(tmp_dir,
-            module_path: Path.join(tmp_dir, "output/same_release.ex"),
-            module_name: SameRelease
-          )
-      )
+    write_config(tmp_dir,
+      icons: icon_set(tmp_dir),
+      same_release:
+        icon_set(tmp_dir,
+          module_path: Path.join(tmp_dir, "output/same_release.ex"),
+          module_name: SameRelease
+        )
+    )
 
     assert_raise RuntimeError, ~r/unable to fetch icons/, fn ->
-      run(config_path, ["--force"])
+      run(tmp_dir, ["--force"])
     end
   end
 
   test "generates only the named icon set", %{tmp_dir: tmp_dir} do
-    config_path =
-      write_config(tmp_dir,
-        icons: icon_set(tmp_dir),
-        other:
-          icon_set(tmp_dir,
-            module_path: Path.join(tmp_dir, "output/other.ex"),
-            module_name: Other
-          )
-      )
+    write_config(tmp_dir,
+      icons: icon_set(tmp_dir),
+      other:
+        icon_set(tmp_dir,
+          module_path: Path.join(tmp_dir, "output/other.ex"),
+          module_name: Other
+        )
+    )
 
-    output = run(config_path, ["--icon-set", "other"])
+    output = run(tmp_dir, ["--icon-set", "other"])
 
     refute output =~ "Processing icons..."
     assert output =~ "Processing other..."
@@ -161,23 +163,21 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
   end
 
   test "reports the cache folder", %{tmp_dir: tmp_dir, cache_dir: cache_dir} do
-    config_path = write_config(tmp_dir, icons: icon_set(tmp_dir))
+    write_config(tmp_dir, icons: icon_set(tmp_dir))
 
-    assert run(config_path) =~ cache_dir
+    assert run(tmp_dir) =~ cache_dir
   end
 
   test "exits if the named icon set does not exist", %{tmp_dir: tmp_dir} do
-    config_path = write_config(tmp_dir, icons: icon_set(tmp_dir))
+    write_config(tmp_dir, icons: icon_set(tmp_dir))
 
     output =
       capture_io(fn ->
         assert catch_exit(
-                 Mix.Task.rerun("ex_icon.gen.icons", [
-                   "--config",
-                   config_path,
-                   "--icon-set",
-                   "nope"
-                 ])
+                 Mix.Task.rerun(
+                   "ex_icon.gen.icons",
+                   args(tmp_dir, ["--icon-set", "nope"])
+                 )
                ) == {:shutdown, 1}
       end)
 
@@ -186,31 +186,23 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
   end
 
   test "exits if the configuration file does not exist", %{tmp_dir: tmp_dir} do
-    config_path = Path.join(tmp_dir, "does-not-exist.exs")
-
     output =
       capture_io(fn ->
-        assert catch_exit(
-                 Mix.Task.rerun("ex_icon.gen.icons", ["--config", config_path])
-               ) == {:shutdown, 1}
+        assert catch_exit(Mix.Task.rerun("ex_icon.gen.icons", args(tmp_dir))) ==
+                 {:shutdown, 1}
       end)
 
     assert output =~ "An error occurred."
     assert output =~ ":enoent"
   end
 
-  describe "cache_dir/0" do
-    test "defaults to the mix cache folder" do
-      System.delete_env("EX_ICON_CACHE_DIR")
+  test "caches releases in the given folder", %{
+    tmp_dir: tmp_dir,
+    cache_dir: cache_dir
+  } do
+    write_config(tmp_dir, icons: icon_set(tmp_dir))
 
-      assert Mix.Tasks.ExIcon.Gen.Icons.cache_dir() ==
-               Path.join(Mix.Utils.mix_cache(), "ex_icon")
-    end
-
-    test "can be overridden with an environment variable" do
-      System.put_env("EX_ICON_CACHE_DIR", "/tmp/ex_icon_cache")
-
-      assert Mix.Tasks.ExIcon.Gen.Icons.cache_dir() == "/tmp/ex_icon_cache"
-    end
+    assert run(tmp_dir) =~ "* writing"
+    assert File.dir?(Path.join([cache_dir, "test_provider", "1.0.0"]))
   end
 end

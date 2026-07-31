@@ -35,8 +35,10 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
   Paths in the configuration file stay relative to the folder the task is run
   in.
 
-  Releases are cached in the Mix cache folder. Set the `EX_ICON_CACHE_DIR`
-  environment variable to cache them in a different folder.
+  Releases are cached in the Mix cache folder. To cache them in a different
+  folder, pass the `--cache-dir` argument:
+
+      mix ex_icon.gen.icons --cache-dir .cache/ex_icon
   """
 
   use Mix.Task
@@ -45,6 +47,7 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
 
   @switches [
     strict: [
+      cache_dir: :string,
       config: :string,
       icon_set: :string,
       force: :boolean
@@ -60,7 +63,9 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
 
     case ExIcon.read_config(opts[:config] || @default_config_path) do
       {:ok, config} ->
-        cache_dir = cache_dir()
+        cache_dir =
+          opts[:cache_dir] || Path.join(Mix.Utils.mix_cache(), @cache_dir)
+
         do_run(config, cache_dir, opts[:icon_set], opts[:force] == true)
 
         IO.puts("""
@@ -81,14 +86,6 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
         """)
 
         exit({:shutdown, 1})
-    end
-  end
-
-  @doc false
-  def cache_dir do
-    case System.get_env("EX_ICON_CACHE_DIR") do
-      nil -> Path.join(Mix.Utils.mix_cache(), @cache_dir)
-      dir -> dir
     end
   end
 

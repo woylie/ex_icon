@@ -12,8 +12,8 @@
   configuration, which allows you more control over the attributes in the
   generated HEEx components.
 - Add provider for Heroicons.
-- Support the `EX_ICON_CACHE_DIR` environment variable to cache releases outside
-  of the Mix cache folder.
+- Add `--cache-dir` flag to `mix ex_icon.gen.icons`, which caches releases in
+  the given folder instead of the Mix cache folder.
 - Add optional `c:ExIcon.Provider.variants/1` callback and `variants`
   configuration option for icon libraries that have multiple style variants.
 

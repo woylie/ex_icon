@@ -72,8 +72,11 @@ task ran. To force a fresh download, run:
 mix ex_icon.gen.icons --force
 ```
 
-You can override the default cache folder with the `EX_ICON_CACHE_DIR`
-environment variable.
+You can override the default cache folder with the `--cache-dir` argument.
+
+```bash
+mix ex_icon.gen.icons --cache-dir .cache/ex_icon
+```
 
 To read the configuration from a path other than `.ex_icon.exs`, run:
 
