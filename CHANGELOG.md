@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Fixed
+
+- Escape SVG attribute values in the generated module. Previously, an attribute
+  value containing `#{}` was written into the generated component code
+  unescaped, where it would be evaluated during compilation.
+
 ## [0.3.0] - 2026-04-10
 
 ### Added

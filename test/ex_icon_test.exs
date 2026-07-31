@@ -123,6 +123,20 @@ defmodule ExIconTest do
     end
   end
 
+  describe "template rendering" do
+    test "renders attribute values as string literals" do
+      assert render_attr({"stroke", "currentColor"}) =~
+               ~S|attr :stroke, :string, default: "currentColor"|
+    end
+
+    test "escapes interpolation in attribute values" do
+      # An SVG attribute value can contain `#{}`, which would be evaluated as
+      # Elixir code during compilation.
+      assert render_attr({"stroke", ~S|#{1 + 1}|}) =~
+               ~S|attr :stroke, :string, default: "\#{1 + 1}"|
+    end
+  end
+
   describe "transform_svg/2" do
     test "adds aria-hidden to empty svg" do
       svg = "<svg></svg>"
@@ -321,5 +335,14 @@ defmodule ExIconTest do
 
       assert {:ok, _} = ExIcon.validate_config(config)
     end
+  end
+
+  defp render_attr(attr) do
+    assigns = [
+      icons: [{"arrow_left", {"<svg></svg>", [attr]}}],
+      module_name: MyAppWeb.Components.Lucide
+    ]
+
+    EEx.eval_file(ExIcon.template_path(), assigns: assigns)
   end
 end
