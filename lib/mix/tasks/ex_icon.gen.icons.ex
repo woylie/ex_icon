@@ -1,50 +1,67 @@
 defmodule Mix.Tasks.ExIcon.Gen.Icons do
-  @shortdoc "Downloads and generates all icons"
+  @shortdoc "Downloads icon libraries and generates the icon modules"
 
   @moduledoc """
-  Downloads and generates all icons.
+  Downloads the configured icon libraries and generates the icon modules.
 
-  The task expects the configuration file `.ex_icon.exs` to exist.
+      $ mix ex_icon.gen.icons
 
-  ## Usage
+  For every icon set in the configuration file, the release of the icon library
+  is downloaded and a module with a function component per icon is generated.
 
-  Download and generate icons for all configured providers:
+  Releases are cached, so regenerating the icons does not download them again.
+  Paths in the configuration file are relative to the folder the task is run in.
 
-      mix ex_icon.gen.icons
+  ## Command line options
 
-  Download and generate icons for a single named provider:
+    * `--cache-dir` - the folder to cache the downloaded releases in, defaults
+      to the Mix cache folder
+    * `--config` - the path of the configuration file, defaults to
+      `.ex_icon.exs` in the folder the task is run in
+    * `--force` - discards the cached releases and downloads them again
+    * `--icon-set` - only generates the given icon set, which must be one of
+      the top level keys in the configuration file
 
-      mix ex_icon.gen.icons --icon-set lucide
+  ## Examples
 
-  The value must reference one of the top level keys in your configuration
-  file.
+  Generate all configured icon sets:
 
-  Releases are only downloaded once. To discard the cached release and download
-  it again, run:
+      $ mix ex_icon.gen.icons
 
-      mix ex_icon.gen.icons --force
+  Generate a single icon set and download its release again:
 
-  Both flags can be combined to only refresh a single icon set.
+      $ mix ex_icon.gen.icons --icon-set lucide --force
+
+  Read the configuration from a different path:
+
+      $ mix ex_icon.gen.icons --config config/icons.exs
   """
 
   use Mix.Task
 
+  alias Mix.Tasks.Format
+
   @switches [
     strict: [
+      cache_dir: :string,
+      config: :string,
       icon_set: :string,
       force: :boolean
     ]
   ]
 
+  @default_config_path ".ex_icon.exs"
   @cache_dir "ex_icon"
 
   @impl Mix.Task
   def run(args) do
     {opts, []} = OptionParser.parse!(args, @switches)
 
-    case ExIcon.read_config() do
+    case ExIcon.read_config(opts[:config] || @default_config_path) do
       {:ok, config} ->
-        cache_dir = Path.join(Mix.Utils.mix_cache(), @cache_dir)
+        cache_dir =
+          opts[:cache_dir] || Path.join(Mix.Utils.mix_cache(), @cache_dir)
+
         do_run(config, cache_dir, opts[:icon_set], opts[:force] == true)
 
         IO.puts("""
@@ -91,23 +108,67 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
   end
 
   defp download_and_generate_all(config, cache_dir, force?) do
-    Enum.each(config, &download_and_generate(&1, cache_dir, force?))
+    config
+    |> with_force_flags(force?)
+    |> Enum.each(fn {icon_set, force_release?} ->
+      download_and_generate(icon_set, cache_dir, force_release?)
+    end)
+  end
+
+  defp with_force_flags(config, force?) do
+    {icon_sets, _seen} =
+      Enum.map_reduce(config, MapSet.new(), fn {_name, opts} = icon_set, seen ->
+        release =
+          {Keyword.fetch!(opts, :provider), Keyword.fetch!(opts, :version)}
+
+        force_release? = force? and not MapSet.member?(seen, release)
+        {{icon_set, force_release?}, MapSet.put(seen, release)}
+      end)
+
+    icon_sets
   end
 
   defp download_and_generate({config_name, opts}, cache_dir, force?) do
     IO.puts("Processing #{config_name}...")
-    svg_dir = ExIcon.download(cache_dir, opts, force: force?)
 
-    IO.puts("Preparing assigns for #{config_name}...")
-    assigns = ExIcon.prepare_assigns(svg_dir, opts)
+    targets = ExIcon.targets(opts)
+    icon_dir = ExIcon.download(cache_dir, opts, force: force?)
 
-    IO.puts("Generating module for #{config_name}...")
-    template_path = ExIcon.template_path()
-    module_path = Keyword.fetch!(opts, :module_path)
+    Enum.each(targets, fn {svg_folder, module_name, module_path} ->
+      generate(Path.join(icon_dir, svg_folder), module_name, module_path, opts)
+    end)
+  end
 
-    Mix.Generator.copy_template(template_path, module_path, assigns)
+  defp generate(svg_dir, module_name, module_path, opts) do
+    IO.puts("Generating #{inspect(module_name)}...")
 
-    Mix.Task.run("format", [module_path])
-    Mix.Task.reenable("format")
+    assigns =
+      svg_dir
+      |> ExIcon.prepare_assigns(opts)
+      |> Keyword.put(:module_name, module_name)
+
+    {formatter, _opts} = Format.formatter_for_file(module_path)
+
+    contents =
+      ExIcon.template_path()
+      |> EEx.eval_file(assigns: assigns)
+      |> formatter.()
+
+    write_module(module_path, contents)
+  end
+
+  defp write_module(module_path, contents) do
+    relative_path = Path.relative_to_cwd(module_path)
+
+    cond do
+      File.read(module_path) == {:ok, contents} ->
+        IO.puts("* #{relative_path} is unchanged")
+
+      Mix.Generator.create_file(module_path, contents, quiet: true) ->
+        IO.puts("* writing #{relative_path}")
+
+      true ->
+        IO.puts("* skipping #{relative_path}")
+    end
   end
 end

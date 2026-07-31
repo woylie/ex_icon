@@ -9,6 +9,7 @@ Generic icon library for Phoenix LiveView.
 - Icon library versions are set via configuration. Update your icons without
   updating this library.
 - Generate components for all icons or only the ones you need.
+- Customize the component attributes.
 - Dev-only dependency. The library is only used for generating icon modules.
 
 ## Installation
@@ -25,7 +26,8 @@ end
 
 ## Usage
 
-ExIcon expects a configuration file named `.ex_icon.exs`.
+ExIcon expects a configuration file named `.ex_icon.exs` in your project root.
+Pass `--config` to read it from a different path.
 
 ```elixir
 [
@@ -43,7 +45,10 @@ ExIcon expects a configuration file named `.ex_icon.exs`.
     module_name: MyAppWeb.Components.Lucide,
     # SVG attributes to turn into component attributes, to override, or to add.
     # Example: ["stroke", {"stroke-width", default: "1.5"}]
-    attrs: []
+    attrs: [],
+    # If supported by the provider, choose the style variants to generate
+    # Example: [:outline, :solid]
+    variants: []
   ]
 ]
 ```
@@ -66,6 +71,20 @@ task ran. To force a fresh download, run:
 ```bash
 mix ex_icon.gen.icons --force
 ```
+
+You can override the default cache folder with the `--cache-dir` argument.
+
+```bash
+mix ex_icon.gen.icons --cache-dir .cache/ex_icon
+```
+
+To read the configuration from a path other than `.ex_icon.exs`, run:
+
+```bash
+mix ex_icon.gen.icons --config config/icons.exs
+```
+
+Paths in the configuration file stay relative to the folder you run the task in.
 
 ## Attributes
 
@@ -149,13 +168,47 @@ end
 Note that if you generate a lot of icons, compilation times can increase
 substantially by adding component attributes.
 
+## Variants
+
+Some icon libraries ship the same icons in multiple styles. For example,
+Heroicons has outlined and filled icons in several sizes. Select the ones you
+need with the `variants` option:
+
+```elixir
+heroicons: [
+  icons: ["academic-cap", "bell"],
+  provider: ExIcon.Heroicons,
+  version: "2.2.0",
+  module_path: "lib/my_app_web/components/heroicons.ex",
+  module_name: MyAppWeb.Components.Heroicons,
+  variants: [:outline, :solid],
+  attrs: ["stroke", "stroke-width", "fill"]
+]
+```
+
+Each variant is generated into a separate module, with the variant appended to
+`module_name` and `module_path`. In this example, ExIcon generates
+`MyAppWeb.Components.Heroicons.Outline` into
+`lib/my_app_web/components/heroicons/outline.ex` and
+`MyAppWeb.Components.Heroicons.Solid` into
+`lib/my_app_web/components/heroicons/solid.ex`. No module is written to the
+configured `module_path` itself.
+
 ## Providers
 
 Providers for specific icon libraries are based on the `ExIcon.Provider`
 behaviour. The library currently supports these providers:
 
+- [Heroicons](https://heroicons.com/)
 - [Lucide](https://lucide.dev/)
 - [Simple Icons](https://simpleicons.org/)
+
+## Project status
+
+ExIcon is actively maintained, but since it covers the use cases it was built
+for, you may not see frequent releases. Issues are fixed, and providers for
+further icon libraries are added when the need arises. There may well be use
+cases that ExIcon does not cover yet.
 
 ## Contributing
 

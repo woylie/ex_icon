@@ -33,6 +33,18 @@
       {"fill", fixed: "currentColor"}
     ]
   ],
+  heroicons: [
+    icons: ["academic-cap", "bell"],
+    provider: ExIcon.Heroicons,
+    version: "2.2.0",
+    module_path: "output/heroicons.ex",
+    module_name: MyAppWeb.Components.Heroicons,
+    # one module per variant, in output/heroicons/
+    variants: [:outline, :solid, :mini, :micro],
+    # the outlined icons have stroke attributes on top of the fill that all
+    # variants have; attributes a variant does not have are ignored
+    attrs: ["stroke", "stroke-width", "fill"]
+  ],
   lucide_all: [
     icons: :all,
     provider: ExIcon.Lucide,

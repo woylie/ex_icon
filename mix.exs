@@ -43,7 +43,7 @@ defmodule ExIcon.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:inets, :logger, :ssl]
+      extra_applications: [:eex, :inets, :logger, :ssl]
     ]
   end
 
@@ -82,10 +82,9 @@ defmodule ExIcon.MixProject do
       source_ref: @version,
       skip_undefined_reference_warnings_on: ["CHANGELOG.md"],
       groups_for_modules: [
-        Providers: [
-          ExIcon.Lucide,
-          ExIcon.SimpleIcons
-        ]
+        Providers: fn metadata ->
+          ExIcon.Provider in Map.get(metadata, :behaviours, [])
+        end
       ]
     ]
   end
@@ -93,7 +92,7 @@ defmodule ExIcon.MixProject do
   defp aliases do
     [
       precommit: [
-        "compile --warning-as-errors",
+        "compile --warnings-as-errors",
         "deps.unlock --unused",
         "format",
         "credo",
