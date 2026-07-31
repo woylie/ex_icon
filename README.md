@@ -196,6 +196,13 @@ behaviour. The library currently supports these providers:
 - [Lucide](https://lucide.dev/)
 - [Simple Icons](https://simpleicons.org/)
 
+## Project status
+
+ExIcon is actively maintained, but since it covers the use cases it was built
+for, you may not see frequent releases. Issues are fixed, and providers for
+further icon libraries are added when the need arises. There may well be use
+cases that ExIcon does not cover yet.
+
 ## Contributing
 
 Please open an issue or PR if you need additional options, features, or support
