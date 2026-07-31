@@ -201,6 +201,87 @@ defmodule ExIconTest do
                module_name: MyAppWeb.Components.Lucide
              ]
     end
+
+    test "prefixes icon names that start with a digit", %{tmp_dir: tmp_dir} do
+      opts = [
+        icons: ["1password"],
+        provider: ExIcon.SimpleIcons,
+        version: "15.0.0",
+        module_path: Path.join(tmp_dir, "lib/components/simple_icons.ex"),
+        module_name: MyAppWeb.Components.SimpleIcons
+      ]
+
+      File.write!(Path.join(tmp_dir, "1password.svg"), "<svg></svg>")
+
+      assert [
+               icons: [{"icon_1password", _}],
+               module_name: MyAppWeb.Components.SimpleIcons
+             ] = ExIcon.prepare_assigns(tmp_dir, opts)
+    end
+
+    test "skips icon names that are not valid function names", %{
+      tmp_dir: tmp_dir
+    } do
+      opts = [
+        icons: :all,
+        provider: ExIcon.Lucide,
+        version: "1.8.0",
+        module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
+        module_name: MyAppWeb.Components.Lucide
+      ]
+
+      injection = "pwn(_a), do: :erlang.display(:INJECTED)\n  def filler"
+      File.write!(Path.join(tmp_dir, "#{injection}.svg"), "<svg></svg>")
+      File.write!(Path.join(tmp_dir, "arrow-left.svg"), "<svg></svg>")
+
+      output =
+        capture_io(fn ->
+          assert [
+                   icons: [{"arrow_left", _}],
+                   module_name: MyAppWeb.Components.Lucide
+                 ] = ExIcon.prepare_assigns(tmp_dir, opts)
+        end)
+
+      assert output =~ "icon names must match"
+    end
+
+    test "skips excluded icons", %{tmp_dir: tmp_dir} do
+      opts = [
+        icons: :all,
+        exclude: ["arrow-right"],
+        provider: ExIcon.Lucide,
+        version: "1.8.0",
+        module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
+        module_name: MyAppWeb.Components.Lucide
+      ]
+
+      File.write!(Path.join(tmp_dir, "arrow-left.svg"), "<svg></svg>")
+      File.write!(Path.join(tmp_dir, "arrow-right.svg"), "<svg></svg>")
+
+      assert [
+               icons: [{"arrow_left", _}],
+               module_name: MyAppWeb.Components.Lucide
+             ] = ExIcon.prepare_assigns(tmp_dir, opts)
+    end
+
+    test "raises if two icons map to the same function name", %{
+      tmp_dir: tmp_dir
+    } do
+      opts = [
+        icons: ["1password", "icon-1password"],
+        provider: ExIcon.SimpleIcons,
+        version: "15.0.0",
+        module_path: Path.join(tmp_dir, "lib/components/simple_icons.ex"),
+        module_name: MyAppWeb.Components.SimpleIcons
+      ]
+
+      File.write!(Path.join(tmp_dir, "1password.svg"), "<svg></svg>")
+      File.write!(Path.join(tmp_dir, "icon-1password.svg"), "<svg></svg>")
+
+      assert_raise ArgumentError, ~r/"icon_1password"/, fn ->
+        ExIcon.prepare_assigns(tmp_dir, opts)
+      end
+    end
   end
 
   describe "template rendering" do

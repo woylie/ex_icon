@@ -15,6 +15,15 @@ defmodule ExIcon do
       or `:all` if you want to generate all available icons.
       """
     ],
+    exclude: [
+      type: {:list, :string},
+      required: false,
+      default: [],
+      doc: """
+      Icon names to skip, which is mostly useful in combination with
+      `icons: :all`. Example: `["1password"]`.
+      """
+    ],
     provider: [
       type: :atom,
       required: true,
@@ -391,6 +400,8 @@ defmodule ExIcon do
     module_name = Keyword.fetch!(opts, :module_name)
     attrs = Keyword.get(opts, :attrs, [])
 
+    exclude = MapSet.new(Keyword.get(opts, :exclude, []))
+
     icon_names =
       case Keyword.fetch!(opts, :icons) do
         :all -> list_svgs(path)
@@ -399,14 +410,65 @@ defmodule ExIcon do
 
     icons =
       icon_names
+      |> Enum.reject(&MapSet.member?(exclude, &1))
       |> Enum.map(fn icon_name ->
-        if svg = read_icon(path, icon_name) do
-          {to_snake_case(icon_name), transform_svg(svg, attrs)}
+        with {:ok, function_name} <- function_name(icon_name),
+             svg when is_binary(svg) <- read_icon(path, icon_name) do
+          {function_name, transform_svg(svg, attrs)}
+        else
+          _ -> nil
         end
       end)
       |> Enum.reject(&is_nil/1)
+      |> ensure_unique_names!()
 
     [icons: icons, module_name: module_name]
+  end
+
+  # Icon names end up as function names in the generated module, so they are
+  # restricted to characters that can produce one. HEEx only accepts component
+  # names that start with a lowercase letter, so names starting with a digit
+  # get an `icon_` prefix.
+  @icon_name_regex ~r/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/
+
+  defp function_name(icon_name) do
+    if Regex.match?(@icon_name_regex, icon_name) do
+      {:ok, icon_name |> to_snake_case() |> prefix_digit()}
+    else
+      IO.puts(
+        "Skipping #{inspect(icon_name)}: icon names must match " <>
+          inspect(@icon_name_regex.source)
+      )
+
+      :error
+    end
+  end
+
+  defp prefix_digit(<<char, _::binary>> = name) when char in ?0..?9,
+    do: "icon_" <> name
+
+  defp prefix_digit(name), do: name
+
+  defp ensure_unique_names!(icons) do
+    duplicates =
+      icons
+      |> Enum.frequencies_by(fn {name, _} -> name end)
+      |> Enum.filter(fn {_name, count} -> count > 1 end)
+      |> Enum.map(fn {name, _count} -> name end)
+
+    if duplicates != [] do
+      raise ArgumentError, """
+      duplicate function names
+
+      These function names are generated more than once:
+      #{Enum.map_join(duplicates, ", ", &inspect/1)}
+
+      Remove the duplicate icons from the :icons option, or add one of them to
+      the :exclude option.
+      """
+    end
+
+    icons
   end
 
   defp read_icon(path, name) do

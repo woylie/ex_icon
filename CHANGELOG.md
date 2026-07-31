@@ -14,6 +14,7 @@
   several sizes.
 - Add `--config`, `--force`, and `--cache-dir` arguments to
   `mix ex_icon.gen.icons`. See `mix help ex_icon.gen.icons`.
+- Add `exclude` configuration option to skip icons of a release.
 
 ### Changed
 
@@ -34,6 +35,10 @@
   release.
 - Do not ask to overwrite generated modules that have not changed.
 - Format all generated modules instead of only the first one.
+- Prefix generated function names that start with a digit with `icon_`, so that
+  `icons: :all` works for Simple Icons.
+- Raise instead of generating a module that does not compile if two icons map to
+  the same function name.
 
 ### Security
 
@@ -41,6 +46,9 @@
   value containing `#{}` was written into the generated component code
   unescaped, where it would be evaluated during compilation.
 - Refuse release archives with entries pointing outside the target folder.
+- Skip icons whose names cannot be turned into function names. Previously, a
+  file name in a release was written into the generated module unchecked, where
+  it could add arbitrary code.
 
 ## [0.3.0] - 2026-04-10
 

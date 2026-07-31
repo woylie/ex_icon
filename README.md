@@ -35,6 +35,8 @@ Pass `--config` to read it from a different path.
     # Either list only the icons you want to generate, or set to `:all` to
     # generate all available icons.
     icons: ["arrow-left", "arrow-right"],
+    # Icon names to skip, which is mostly useful with `icons: :all`.
+    exclude: [],
     # A module implementing the `ExIcon.Provider` behaviour.
     provider: ExIcon.Lucide,
     # The release version of the icon library.
@@ -85,6 +87,16 @@ mix ex_icon.gen.icons --config config/icons.exs
 ```
 
 Paths in the configuration file stay relative to the folder you run the task in.
+
+## Icon names
+
+Each function component is named after its SVG file in snake case, so
+`arrow-left.svg` becomes `arrow_left`. Names that start with a digit get an
+`icon_` prefix, since HEEx does not accept component names that start with a
+digit. `1password.svg` becomes `icon_1password`.
+
+Icons with names that cannot be turned into function names are skipped and
+reported.
 
 ## Attributes
 
