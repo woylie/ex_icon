@@ -70,6 +70,9 @@ task ran. To force a fresh download, run:
 mix ex_icon.gen.icons --force
 ```
 
+You can override the default cache folder with the `EX_ICON_CACHE_DIR`
+environment variable.
+
 ## Attributes
 
 ExIcon can optionally turn SVG attributes into function component attributes,
