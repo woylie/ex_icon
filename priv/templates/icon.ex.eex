@@ -6,7 +6,7 @@ defmodule <%= inspect(@module_name) %> do
   """
   use Phoenix.Component
 <%= for {name, {svg, attrs}} <- @icons do %><%= for {attr, default} <- attrs do %>
-  attr :<%= attr %>, :string, default: "<%= default %>"<% end %>
+  attr :<%= attr %>, :string, default: <%= inspect(default) %><% end %>
 
   def <%= name %>(assigns) do
     ~H"""
