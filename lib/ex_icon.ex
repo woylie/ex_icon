@@ -236,21 +236,20 @@ defmodule ExIcon do
   end
 
   defp validate_fixed_option(name, opts) do
-    cond do
-      not Keyword.has_key?(opts, :fixed) ->
-        :ok
+    if Keyword.has_key?(opts, :fixed) do
+      case Enum.find(
+             [:default, :values, :required],
+             &Keyword.has_key?(opts, &1)
+           ) do
+        nil ->
+          :ok
 
-      Keyword.has_key?(opts, :default) ->
-        {:error, "attribute #{inspect(name)} sets both :default and :fixed"}
-
-      Keyword.has_key?(opts, :values) ->
-        {:error, "attribute #{inspect(name)} sets both :values and :fixed"}
-
-      Keyword.has_key?(opts, :required) ->
-        {:error, "attribute #{inspect(name)} sets both :required and :fixed"}
-
-      true ->
-        :ok
+        option ->
+          {:error,
+           "attribute #{inspect(name)} sets both #{inspect(option)} and :fixed"}
+      end
+    else
+      :ok
     end
   end
 
