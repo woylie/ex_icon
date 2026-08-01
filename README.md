@@ -27,7 +27,6 @@ end
 ## Usage
 
 ExIcon expects a configuration file named `.ex_icon.exs` in your project root.
-Pass `--config` to read it from a different path.
 
 ```elixir
 [
@@ -68,32 +67,11 @@ mix ex_icon.gen.icons
 Downloaded releases are cached in your Mix cache folder (`~/.cache/mix/ex_icon`
 on Linux, `~/Library/Caches/mix/ex_icon` on macOS), so regenerating your icons
 does not download the same release again. The exact path is printed after the
-task ran. To download a release again, run:
-
-```bash
-mix ex_icon.gen.icons --refresh
-```
-
-ExIcon asks before it overwrites a module that has changed. Pass `--force` to
-write the modules without being asked:
-
-```bash
-mix ex_icon.gen.icons --force
-```
-
-You can override the default cache folder with the `--cache-dir` argument.
-
-```bash
-mix ex_icon.gen.icons --cache-dir .cache/ex_icon
-```
-
-To read the configuration from a path other than `.ex_icon.exs`, run:
-
-```bash
-mix ex_icon.gen.icons --config config/icons.exs
-```
+task ran.
 
 Paths in the configuration file stay relative to the folder you run the task in.
+
+Run `mix help ex_icon.gen.icons` for the available command line arguments.
 
 ## Icon names
 

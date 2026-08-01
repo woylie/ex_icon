@@ -35,6 +35,7 @@
   interrupted run does not leave a partial release behind.
 - Add connect and receive timeouts to the release download.
 - Fail if a module was not written.
+- Fail if an icon listed in the configuration was not generated.
 
 ### Fixed
 

@@ -393,15 +393,18 @@ defmodule ExIcon do
 
     exclude = MapSet.new(Keyword.get(opts, :exclude, []))
 
+    configured = Keyword.fetch!(opts, :icons)
+
     icon_names =
-      case Keyword.fetch!(opts, :icons) do
+      case configured do
         :all -> list_svgs(path)
         icon_names -> icon_names
       end
 
+    wanted = Enum.reject(icon_names, &MapSet.member?(exclude, &1))
+
     icons =
-      icon_names
-      |> Enum.reject(&MapSet.member?(exclude, &1))
+      wanted
       |> Enum.map(fn icon_name ->
         with {:ok, function_name} <- function_name(icon_name),
              svg when is_binary(svg) <- read_icon(path, icon_name),
@@ -414,8 +417,23 @@ defmodule ExIcon do
       |> Enum.reject(&is_nil/1)
       |> ensure_unique_names!()
 
+    if configured != :all, do: ensure_nothing_missing!(wanted, icons)
+
     [icons: icons, module_name: module_name]
   end
+
+  # raise if icon listed in the configuration is missing
+  defp ensure_nothing_missing!(wanted, icons)
+       when length(wanted) != length(icons) do
+    raise ArgumentError, """
+    could not generate every configured icon
+
+    #{length(icons)} of #{length(wanted)} icons were generated. See the messages
+    above for the icons that were skipped and why.
+    """
+  end
+
+  defp ensure_nothing_missing!(_wanted, _icons), do: :ok
 
   # Icon names end up as function names in the generated module, so they are
   # restricted to characters that can produce one. HEEx only accepts component

@@ -144,7 +144,9 @@ defmodule ExIconTest do
       refute output =~ "Could not read file"
     end
 
-    test "skips and reports icons that cannot be read", %{tmp_dir: tmp_dir} do
+    test "reports and fails for a configured icon that cannot be read", %{
+      tmp_dir: tmp_dir
+    } do
       opts = [
         icons: ["arrow-left", "does-not-exist"],
         provider: ExIcon.Lucide,
@@ -157,14 +159,36 @@ defmodule ExIconTest do
 
       output =
         capture_io(fn ->
+          assert_raise ArgumentError,
+                       ~r/could not generate every configured icon/,
+                       fn -> ExIcon.prepare_assigns(tmp_dir, opts) end
+        end)
+
+      assert output =~ "Could not read file"
+      assert output =~ "does-not-exist.svg"
+    end
+
+    test "skips an icon of :all that cannot be read", %{tmp_dir: tmp_dir} do
+      opts = [
+        icons: :all,
+        provider: ExIcon.Lucide,
+        version: "1.8.0",
+        module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
+        module_name: MyAppWeb.Components.Lucide
+      ]
+
+      File.write!(Path.join(tmp_dir, "arrow-left.svg"), "<svg></svg>")
+      File.write!(Path.join(tmp_dir, "broken.svg"), "<svg><script /></svg>")
+
+      output =
+        capture_io(fn ->
           assert [
                    icons: [{"arrow_left", _}],
                    module_name: MyAppWeb.Components.Lucide
                  ] = ExIcon.prepare_assigns(tmp_dir, opts)
         end)
 
-      assert output =~ "Could not read file"
-      assert output =~ "does-not-exist.svg"
+      assert output =~ "Skipping broken.svg"
     end
 
     test "ignores non-svg files", %{tmp_dir: tmp_dir} do
@@ -282,10 +306,9 @@ defmodule ExIconTest do
 
       output =
         capture_io(fn ->
-          assert [
-                   icons: [{"arrow_left", _}],
-                   module_name: MyAppWeb.Components.Lucide
-                 ] = ExIcon.prepare_assigns(tmp_dir, opts)
+          assert_raise ArgumentError,
+                       ~r/could not generate every configured icon/,
+                       fn -> ExIcon.prepare_assigns(tmp_dir, opts) end
         end)
 
       assert output =~ "Skipping broken.svg"
@@ -1184,20 +1207,24 @@ defmodule ExIconTest do
     test "raises for a release URL that is not https", %{tmp_dir: tmp_dir} do
       opts = [provider: PlainHttpProvider, version: "1.0.0"]
 
-      assert_raise ArgumentError, ~r/invalid release URL/, fn ->
-        ExIcon.download(tmp_dir, opts)
-      end
+      capture_io(fn ->
+        assert_raise ArgumentError, ~r/invalid release URL/, fn ->
+          ExIcon.download(tmp_dir, opts)
+        end
+      end)
     end
 
     test "keeps providers apart that share the last name segment", %{
       tmp_dir: tmp_dir
     } do
-      assert_raise RuntimeError, fn ->
-        ExIcon.download(tmp_dir,
-          provider: UnreachableProvider,
-          version: "1.0.0"
-        )
-      end
+      capture_io(fn ->
+        assert_raise RuntimeError, fn ->
+          ExIcon.download(tmp_dir,
+            provider: UnreachableProvider,
+            version: "1.0.0"
+          )
+        end
+      end)
 
       assert File.ls!(tmp_dir) == ["ex_icon_test_unreachable_provider"]
     end
