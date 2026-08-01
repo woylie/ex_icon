@@ -163,6 +163,45 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
     end
   end
 
+  test "generates from a local folder", %{tmp_dir: tmp_dir} do
+    svg_dir = Path.join(tmp_dir, "assets/icons")
+    File.mkdir_p!(svg_dir)
+    File.write!(Path.join(svg_dir, "arrow-left.svg"), svg())
+
+    write_config(tmp_dir,
+      custom: [
+        path: svg_dir,
+        icons: :all,
+        module_path: Path.join(tmp_dir, "output/custom.ex"),
+        module_name: MyAppWeb.Components.Custom
+      ]
+    )
+
+    output = run(tmp_dir)
+
+    assert output =~ "Reading #{Path.relative_to_cwd(svg_dir)}..."
+    assert output =~ "* writing"
+
+    assert File.read!(Path.join(tmp_dir, "output/custom.ex")) =~
+             "def arrow_left(assigns) do"
+  end
+
+  test "fails if the path of an icon set is not a folder", %{tmp_dir: tmp_dir} do
+    write_config(tmp_dir,
+      icons: icon_set(tmp_dir),
+      custom: [
+        path: Path.join(tmp_dir, "nope"),
+        icons: :all,
+        module_path: Path.join(tmp_dir, "output/custom.ex"),
+        module_name: MyAppWeb.Components.Custom
+      ]
+    )
+
+    assert_raise ArgumentError, ~r/is not a folder/, fn -> run(tmp_dir) end
+
+    refute File.exists?(Path.join(tmp_dir, "output/icons.ex"))
+  end
+
   test "checks every icon set before writing anything", %{tmp_dir: tmp_dir} do
     write_config(tmp_dir,
       icons: icon_set(tmp_dir),
@@ -203,6 +242,50 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
     write_config(tmp_dir, icons: icon_set(tmp_dir))
 
     assert run(tmp_dir) =~ cache_dir
+  end
+
+  test "does not report the cache folder for a local only configuration", %{
+    tmp_dir: tmp_dir,
+    cache_dir: cache_dir
+  } do
+    svg_dir = Path.join(tmp_dir, "assets/icons")
+    File.mkdir_p!(svg_dir)
+    File.write!(Path.join(svg_dir, "arrow-left.svg"), svg())
+
+    write_config(tmp_dir,
+      custom: [
+        path: svg_dir,
+        icons: :all,
+        module_path: Path.join(tmp_dir, "output/custom.ex"),
+        module_name: MyAppWeb.Components.Custom
+      ]
+    )
+
+    output = run(tmp_dir)
+
+    assert output =~ "Done."
+    refute output =~ cache_dir
+  end
+
+  test "does not report the cache folder when only a local set is selected", %{
+    tmp_dir: tmp_dir,
+    cache_dir: cache_dir
+  } do
+    svg_dir = Path.join(tmp_dir, "assets/icons")
+    File.mkdir_p!(svg_dir)
+    File.write!(Path.join(svg_dir, "arrow-left.svg"), svg())
+
+    write_config(tmp_dir,
+      icons: icon_set(tmp_dir),
+      custom: [
+        path: svg_dir,
+        icons: :all,
+        module_path: Path.join(tmp_dir, "output/custom.ex"),
+        module_name: MyAppWeb.Components.Custom
+      ]
+    )
+
+    refute run(tmp_dir, ["--icon-set", "custom"]) =~ cache_dir
   end
 
   test "exits if the named icon set does not exist", %{tmp_dir: tmp_dir} do

@@ -944,6 +944,72 @@ defmodule ExIconTest do
       end
     end
 
+    test "returns the folder itself for an icon set with a path" do
+      assert ExIcon.targets(
+               icons: :all,
+               path: "test/ex_icon",
+               module_path: "lib/components/icons.ex",
+               module_name: MyAppWeb.Components.Icons
+             ) == [{"", MyAppWeb.Components.Icons, "lib/components/icons.ex"}]
+    end
+
+    test "raises if the path of an icon set is not a folder" do
+      assert_raise ArgumentError, ~r/is not a folder/, fn ->
+        ExIcon.targets(
+          icons: :all,
+          path: "does/not/exist",
+          module_path: "lib/components/icons.ex",
+          module_name: MyAppWeb.Components.Icons
+        )
+      end
+    end
+
+    test "raises if an icon set has no source" do
+      assert_raise ArgumentError, ~r/icon set without a source/, fn ->
+        ExIcon.targets(
+          icons: :all,
+          module_path: "lib/components/icons.ex",
+          module_name: MyAppWeb.Components.Icons
+        )
+      end
+    end
+
+    test "raises if an icon set has both a path and a provider" do
+      assert_raise ArgumentError, ~r/icon set with two sources/, fn ->
+        ExIcon.targets(
+          icons: :all,
+          path: "assets/icons",
+          provider: ExIcon.Lucide,
+          version: "1.8.0",
+          module_path: "lib/components/icons.ex",
+          module_name: MyAppWeb.Components.Icons
+        )
+      end
+    end
+
+    test "raises if a provider is given without a version" do
+      assert_raise ArgumentError, ~r/icon set without a version/, fn ->
+        ExIcon.targets(
+          icons: :all,
+          provider: ExIcon.Lucide,
+          module_path: "lib/components/icons.ex",
+          module_name: MyAppWeb.Components.Icons
+        )
+      end
+    end
+
+    test "raises if an icon set with a path configures variants" do
+      assert_raise ArgumentError, ~r/variants are not supported/, fn ->
+        ExIcon.targets(
+          icons: :all,
+          path: "assets/icons",
+          variants: [:outline],
+          module_path: "lib/components/icons.ex",
+          module_name: MyAppWeb.Components.Icons
+        )
+      end
+    end
+
     test "raises if the provider has no variants" do
       assert_raise ArgumentError, ~r/not supported by ExIcon.Lucide/, fn ->
         ExIcon.targets(
@@ -958,7 +1024,7 @@ defmodule ExIconTest do
     end
   end
 
-  describe "download/3 with a served release" do
+  describe "icon_dir/3 with a served release" do
     @describetag :tmp_dir
 
     setup %{tmp_dir: tmp_dir} do
@@ -1013,7 +1079,7 @@ defmodule ExIconTest do
       cache_dir: cache_dir,
       opts: opts
     } do
-      {icon_dir, output} = with_io(fn -> ExIcon.download(cache_dir, opts) end)
+      {icon_dir, output} = with_io(fn -> ExIcon.icon_dir(cache_dir, opts) end)
 
       assert output =~ "Downloading local_provider 1.0.0..."
 
@@ -1032,14 +1098,16 @@ defmodule ExIconTest do
       cache_dir: cache_dir,
       opts: opts
     } do
-      capture_io(fn -> ExIcon.download(cache_dir, opts) end)
+      capture_io(fn -> ExIcon.icon_dir(cache_dir, opts) end)
 
       marker =
         Path.join([cache_dir, "ex_icon_test_local_provider", "1.0.0", "marker"])
 
       File.write!(marker, "kept")
 
-      assert capture_io(fn -> ExIcon.download(cache_dir, opts) end) == ""
+      assert capture_io(fn -> ExIcon.icon_dir(cache_dir, opts) end) =~
+               "Using cached local_provider 1.0.0"
+
       assert File.read!(marker) == "kept"
     end
 
@@ -1047,7 +1115,7 @@ defmodule ExIconTest do
       cache_dir: cache_dir,
       opts: opts
     } do
-      capture_io(fn -> ExIcon.download(cache_dir, opts) end)
+      capture_io(fn -> ExIcon.icon_dir(cache_dir, opts) end)
 
       marker =
         Path.join([cache_dir, "ex_icon_test_local_provider", "1.0.0", "marker"])
@@ -1055,7 +1123,7 @@ defmodule ExIconTest do
       File.write!(marker, "discarded")
 
       assert capture_io(fn ->
-               ExIcon.download(cache_dir, opts, force: true)
+               ExIcon.icon_dir(cache_dir, opts, force: true)
              end) =~ "Downloading local_provider 1.0.0..."
 
       refute File.exists?(marker)
@@ -1081,7 +1149,7 @@ defmodule ExIconTest do
       capture_io(fn ->
         assert_raise RuntimeError,
                      ~r/Unable to move the downloaded icons into the cache/,
-                     fn -> ExIcon.download(cache_dir, opts) end
+                     fn -> ExIcon.icon_dir(cache_dir, opts) end
       end)
 
       assert File.ls!(Path.dirname(icon_dir)) == ["1.0.0"]
@@ -1093,7 +1161,7 @@ defmodule ExIconTest do
     } do
       opts = Keyword.put(opts, :variants, [:plain, :nested])
 
-      {icon_dir, _output} = with_io(fn -> ExIcon.download(cache_dir, opts) end)
+      {icon_dir, _output} = with_io(fn -> ExIcon.icon_dir(cache_dir, opts) end)
 
       for {svg_folder, _module_name, _module_path} <- ExIcon.targets(opts) do
         assert File.dir?(Path.join(icon_dir, svg_folder))
@@ -1101,7 +1169,7 @@ defmodule ExIconTest do
     end
   end
 
-  describe "download/3" do
+  describe "icon_dir/3" do
     @describetag :tmp_dir
 
     test "reuses a cached release without downloading again", %{
@@ -1120,7 +1188,10 @@ defmodule ExIconTest do
       File.mkdir_p!(svg_dir)
       File.write!(Path.join(svg_dir, "cached.svg"), "<svg></svg>")
 
-      assert ExIcon.download(tmp_dir, opts) == icon_dir
+      assert capture_io(fn ->
+               assert ExIcon.icon_dir(tmp_dir, opts) == icon_dir
+             end) =~ "Using cached lucide 1.8.0"
+
       assert File.read!(Path.join(svg_dir, "cached.svg")) == "<svg></svg>"
     end
 
@@ -1139,11 +1210,11 @@ defmodule ExIconTest do
       svg_dir = Path.join(icon_dir, "icons")
       File.mkdir_p!(svg_dir)
 
-      assert ExIcon.download(tmp_dir, opts) == icon_dir
+      capture_io(fn -> assert ExIcon.icon_dir(tmp_dir, opts) == icon_dir end)
 
       capture_io(fn ->
         assert_raise RuntimeError, ~r/unable to fetch icons/, fn ->
-          ExIcon.download(tmp_dir, opts, force: true)
+          ExIcon.icon_dir(tmp_dir, opts, force: true)
         end
       end)
 
@@ -1163,7 +1234,7 @@ defmodule ExIconTest do
 
       capture_io(fn ->
         assert_raise RuntimeError, ~r/unable to fetch icons/, fn ->
-          ExIcon.download(tmp_dir, opts)
+          ExIcon.icon_dir(tmp_dir, opts)
         end
       end)
 
@@ -1180,7 +1251,7 @@ defmodule ExIconTest do
     end
   end
 
-  describe "download/3 validation" do
+  describe "icon_dir/3 validation" do
     @describetag :tmp_dir
 
     defmodule PlainHttpProvider do
@@ -1198,7 +1269,7 @@ defmodule ExIconTest do
         opts = [provider: UnreachableProvider, version: version]
 
         assert_raise ArgumentError, ~r/invalid version/, fn ->
-          ExIcon.download(tmp_dir, opts)
+          ExIcon.icon_dir(tmp_dir, opts)
         end
       end
     end
@@ -1208,7 +1279,7 @@ defmodule ExIconTest do
 
       capture_io(fn ->
         assert_raise ArgumentError, ~r/invalid release URL/, fn ->
-          ExIcon.download(tmp_dir, opts)
+          ExIcon.icon_dir(tmp_dir, opts)
         end
       end)
     end
@@ -1218,7 +1289,7 @@ defmodule ExIconTest do
     } do
       capture_io(fn ->
         assert_raise RuntimeError, fn ->
-          ExIcon.download(tmp_dir,
+          ExIcon.icon_dir(tmp_dir,
             provider: UnreachableProvider,
             version: "1.0.0"
           )

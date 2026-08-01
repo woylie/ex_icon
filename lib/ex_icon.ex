@@ -26,13 +26,24 @@ defmodule ExIcon do
     ],
     provider: [
       type: :atom,
-      required: true,
-      doc: "A module implementing the `ExIcon.Provider` behaviour."
+      required: false,
+      doc: """
+      A module implementing the `ExIcon.Provider` behaviour. Required with
+      `version`, unless `path` is set.
+      """
     ],
     version: [
       type: :string,
-      required: true,
+      required: false,
       doc: "The release version of the icon library."
+    ],
+    path: [
+      type: :string,
+      required: false,
+      doc: """
+      Path to a folder that contains SVG files. Cannot be used together with
+      `provider` and `version`.
+      """
     ],
     module_path: [
       type: :string,
@@ -70,6 +81,8 @@ defmodule ExIcon do
 
       Defaults to an empty list, which generates a single module from
       `c:ExIcon.Provider.svg_folder/1`.
+
+      Not supported if `path` is set.
       """
     ],
     attrs: [
@@ -522,27 +535,63 @@ defmodule ExIcon do
   end
 
   @doc false
-  def download(cache_dir, opts, download_opts \\ []) do
-    provider = Keyword.fetch!(opts, :provider)
-    version = validate_version!(Keyword.fetch!(opts, :version))
+  def icon_dir(cache_dir, opts, download_opts \\ []) do
+    case source!(opts) do
+      {:path, path} ->
+        path = existing_dir!(path)
+        IO.puts("Reading #{Path.relative_to_cwd(path)}...")
+        path
 
+      {:release, provider, version} ->
+        cached_release(cache_dir, provider, version, download_opts)
+    end
+  end
+
+  defp existing_dir!(path) do
+    if File.dir?(path) do
+      path
+    else
+      raise ArgumentError, """
+      #{inspect(path)} is not a folder
+
+      The :path must be relative to the folder the task is run in.
+      """
+    end
+  end
+
+  defp cached_release(cache_dir, provider, version, download_opts) do
+    version = validate_version!(version)
     icon_dir = Path.join([cache_dir, cache_key(provider), version])
 
     if Keyword.get(download_opts, :force, false), do: File.rm_rf!(icon_dir)
-    if !File.dir?(icon_dir), do: fill_cache!(icon_dir, provider, version)
+
+    if File.dir?(icon_dir) do
+      IO.puts("Using cached #{provider_name(provider)} #{version}...")
+    else
+      fill_cache!(icon_dir, provider, version)
+    end
 
     icon_dir
   end
 
   @doc false
   def targets(opts) do
-    provider = Keyword.fetch!(opts, :provider)
-    version = Keyword.fetch!(opts, :version)
     module_name = Keyword.fetch!(opts, :module_name)
     module_path = Keyword.fetch!(opts, :module_path)
 
-    load_provider!(provider)
+    case source!(opts) do
+      {:path, path} ->
+        no_variants!(opts)
+        existing_dir!(path)
+        [{"", module_name, module_path}]
 
+      {:release, provider, version} ->
+        load_provider!(provider)
+        release_targets(opts, provider, version, module_name, module_path)
+    end
+  end
+
+  defp release_targets(opts, provider, version, module_name, module_path) do
     case Keyword.get(opts, :variants, []) do
       [] ->
         [{provider.svg_folder(version), module_name, module_path}]
@@ -555,6 +604,58 @@ defmodule ExIcon do
            Module.concat(module_name, variant_alias(variant)),
            variant_module_path(module_path, variant)}
         end)
+    end
+  end
+
+  # an icon set is either downloaded from a provider URL or read from a folder
+  defp source!(opts) do
+    case {Keyword.get(opts, :path), Keyword.get(opts, :provider)} do
+      {nil, nil} ->
+        raise ArgumentError, """
+        icon set without a source
+
+        Set either :path, or :provider and :version.
+        """
+
+      {path, nil} when is_binary(path) ->
+        {:path, path}
+
+      {nil, provider} ->
+        {:release, provider, fetch_version!(opts, provider)}
+
+      {_path, _provider} ->
+        raise ArgumentError, """
+        icon set with two sources
+
+        Set either :path, or :provider and :version, but not both.
+        """
+    end
+  end
+
+  defp fetch_version!(opts, provider) do
+    case Keyword.get(opts, :version) do
+      version when is_binary(version) ->
+        version
+
+      nil ->
+        raise ArgumentError, """
+        icon set without a version
+
+        #{inspect(provider)} needs a :version to know which release to download.
+        """
+    end
+  end
+
+  defp no_variants!(opts) do
+    if Keyword.get(opts, :variants, []) == [] do
+      :ok
+    else
+      raise ArgumentError, """
+      variants are not supported for an icon set with a :path
+
+      Variants are the style folders of a release. Configure one icon set per
+      folder instead.
+      """
     end
   end
 

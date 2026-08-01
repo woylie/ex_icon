@@ -59,8 +59,8 @@ ExIcon expects a configuration file named `.ex_icon.exs` in your project root.
 `lucide` is an arbitrary name that is currently only used for CLI output.
 You can configure any number of icon providers.
 
-With your configuration in place, you can download the configured release of
-the icon library and generate a module with function components with:
+With your configuration in place, you can download the configured releases and
+generate a module with function components for every icon set with:
 
 ```bash
 mix ex_icon.gen.icons
@@ -207,6 +207,22 @@ Each variant is generated into a separate module, with the variant appended to
 `MyAppWeb.Components.Heroicons.Solid` into
 `lib/my_app_web/components/heroicons/solid.ex`. No module is written to the
 configured `module_path` itself.
+
+## Local icon sets
+
+You can also generate an icon module from a local folder with SVG files by using
+the `path` option instead of `provider` and `version`:
+
+```elixir
+custom: [
+  path: "assets/icons",
+  icons: :all,
+  module_path: "lib/my_app_web/components/custom.ex",
+  module_name: MyAppWeb.Components.Custom
+]
+```
+
+The `variants` option is not supported for local folders.
 
 ## Providers
 
