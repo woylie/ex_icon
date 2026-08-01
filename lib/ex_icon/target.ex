@@ -5,7 +5,6 @@ defmodule ExIcon.Target do
   # release each of them is built from. An icon set with variants produces one
   # target per variant.
 
-  @doc false
   def targets(opts) do
     module_name = Keyword.fetch!(opts, :module_name)
     module_path = Keyword.fetch!(opts, :module_path)

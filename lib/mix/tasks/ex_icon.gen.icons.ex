@@ -199,7 +199,7 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
 
     assigns =
       svg_dir
-      |> ExIcon.prepare_assigns(opts)
+      |> ExIcon.Components.prepare_assigns(opts)
       |> Keyword.put(:module_name, module_name)
 
     {formatter, _opts} = Format.formatter_for_file(module_path)
