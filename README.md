@@ -68,7 +68,14 @@ mix ex_icon.gen.icons
 Downloaded releases are cached in your Mix cache folder (`~/.cache/mix/ex_icon`
 on Linux, `~/Library/Caches/mix/ex_icon` on macOS), so regenerating your icons
 does not download the same release again. The exact path is printed after the
-task ran. To force a fresh download, run:
+task ran. To download a release again, run:
+
+```bash
+mix ex_icon.gen.icons --refresh
+```
+
+ExIcon asks before it overwrites a module that has changed. Pass `--force` to
+write the modules without being asked:
 
 ```bash
 mix ex_icon.gen.icons --force

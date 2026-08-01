@@ -12,7 +12,7 @@
   Each variant is generated into a module of its own, from a single download.
 - Add provider for Heroicons, which has outlined and filled variants in
   several sizes.
-- Add `--config`, `--force`, and `--cache-dir` arguments to
+- Add `--cache-dir`, `--config`, `--force`, and `--refresh` arguments to
   `mix ex_icon.gen.icons`. See `mix help ex_icon.gen.icons`.
 - Add `exclude` configuration option to skip individual icons.
 

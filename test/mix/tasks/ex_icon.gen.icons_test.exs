@@ -134,7 +134,18 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
     assert File.read!(module_path) == "# edited by hand\n"
   end
 
-  test "discards a cached release only once per run with --force", %{
+  test "overwrites a changed module with --force", %{tmp_dir: tmp_dir} do
+    write_config(tmp_dir, icons: icon_set(tmp_dir))
+    run(tmp_dir)
+
+    module_path = Path.join(tmp_dir, "output/icons.ex")
+    File.write!(module_path, "# edited by hand\n")
+
+    assert run(tmp_dir, ["--force"]) =~ "* writing"
+    assert File.read!(module_path) =~ "def arrow_left(assigns) do"
+  end
+
+  test "discards a cached release only once per run with --refresh", %{
     tmp_dir: tmp_dir
   } do
     write_config(tmp_dir,
@@ -147,7 +158,7 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
     )
 
     assert_raise RuntimeError, ~r/unable to fetch icons/, fn ->
-      run(tmp_dir, ["--force"])
+      run(tmp_dir, ["--refresh"])
     end
   end
 
