@@ -181,7 +181,7 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
     IO.puts("Processing #{config_name}...")
 
     targets = ExIcon.targets(opts)
-    icon_dir = ExIcon.icon_dir(cache_dir, opts, force: refresh?)
+    icon_dir = ExIcon.Source.icon_dir(cache_dir, opts, force: refresh?)
 
     Enum.map(targets, fn {svg_folder, module_name, module_path} ->
       generate(
