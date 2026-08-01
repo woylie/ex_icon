@@ -1,4 +1,4 @@
-defmodule ExIcon.Lucide do
+defmodule ExIcon.Providers.Lucide do
   @moduledoc """
   ExIcon provider for Lucide icons.
 

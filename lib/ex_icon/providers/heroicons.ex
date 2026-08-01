@@ -1,4 +1,4 @@
-defmodule ExIcon.Heroicons do
+defmodule ExIcon.Providers.Heroicons do
   @moduledoc """
   ExIcon provider for Heroicons.
 
@@ -11,6 +11,8 @@ defmodule ExIcon.Heroicons do
   - `:solid` - filled icons on a 24x24 viewbox
   - `:mini` - filled icons on a 20x20 viewbox
   - `:micro` - filled icons on a 16x16 viewbox
+
+  Without the option, only the `:outline` variant is generated.
 
   Note that the variants differ in their attributes. The outlined icons have
   `stroke` and `stroke-width` attributes and a `fill` of `none`, while the

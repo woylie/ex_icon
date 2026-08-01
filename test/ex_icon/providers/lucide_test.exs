@@ -1,7 +1,7 @@
-defmodule ExIcon.LucideTest do
+defmodule ExIcon.Providers.LucideTest do
   use ExUnit.Case, async: true
 
-  alias ExIcon.Lucide
+  alias ExIcon.Providers.Lucide
 
   describe "release_url/1" do
     test "returns the url of the release archive" do

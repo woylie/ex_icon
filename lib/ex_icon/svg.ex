@@ -340,19 +340,16 @@ defmodule ExIcon.SVG do
     [" ", name, ~s(="), escape_attribute(value), ~s(")]
   end
 
-  # in addition to XML escapes: `{` starts a HEEx expression, and three quotes
-  # in a row end the heredoc the body is written into
+  # text needs the braces escaped on top, since `{` starts a HEEx expression
   defp escape_text(text) do
     text
-    |> String.replace("&", "&amp;")
-    |> String.replace("<", "&lt;")
-    |> String.replace(">", "&gt;")
-    |> String.replace("\"", "&quot;")
+    |> escape_attribute()
     |> String.replace("{", "&lbrace;")
     |> String.replace("}", "&rbrace;")
   end
 
-  @doc false
+  # the quotes are escaped because three of them in a row would end the heredoc
+  # the icon is written into
   def escape_attribute(value) do
     value
     |> String.replace("&", "&amp;")

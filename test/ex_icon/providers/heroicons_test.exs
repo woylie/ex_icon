@@ -1,7 +1,7 @@
-defmodule ExIcon.HeroiconsTest do
+defmodule ExIcon.Providers.HeroiconsTest do
   use ExUnit.Case, async: true
 
-  alias ExIcon.Heroicons
+  alias ExIcon.Providers.Heroicons
 
   describe "release_url/1" do
     test "returns the url of the tagged release archive" do

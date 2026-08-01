@@ -1,8 +1,7 @@
 [
   icon_sets: [
     lucide: [
-      icons: ["arrow-left", "arrow-right"],
-      provider: ExIcon.Lucide,
+      provider: ExIcon.Providers.Lucide,
       version: "1.8.0",
       module_path: "output/lucide.ex",
       module_name: MyAppWeb.Components.Lucide,
@@ -24,22 +23,22 @@
         {"fill", fixed: "currentColor"},
         # aria-hidden added automatically, but can be set explicitly
         {"aria-hidden", default: "true"}
-      ]
+      ],
+      icons: ["arrow-left", "arrow-right"]
     ],
     simple_icons: [
-      icons: ["helix", "mastodon"],
-      provider: ExIcon.SimpleIcons,
+      provider: ExIcon.Providers.SimpleIcons,
       version: "16.15.0",
       module_path: "output/simple_icons.ex",
       module_name: MyAppWeb.Components.SimpleIcons,
       attrs: [
         # additional attribute not in the original SVG
         {"fill", fixed: "currentColor"}
-      ]
+      ],
+      icons: ["helix", "mastodon"]
     ],
     heroicons: [
-      icons: ["academic-cap", "bell"],
-      provider: ExIcon.Heroicons,
+      provider: ExIcon.Providers.Heroicons,
       version: "2.2.0",
       module_path: "output/heroicons.ex",
       module_name: MyAppWeb.Components.Heroicons,
@@ -47,16 +46,25 @@
       variants: [:outline, :solid, :mini, :micro],
       # the outlined icons have stroke attributes on top of the fill that all
       # variants have; attributes a variant does not have are ignored
-      attrs: ["stroke", "stroke-width", "fill"]
+      attrs: ["stroke", "stroke-width", "fill"],
+      icons: ["academic-cap", "bell"]
     ],
     lucide_all: [
-      icons: :all,
-      # icons to skip
-      exclude: ["arrow-left"],
-      provider: ExIcon.Lucide,
+      provider: ExIcon.Providers.Lucide,
       version: "1.8.0",
       module_path: "output/lucide_all.ex",
-      module_name: MyAppWeb.Components.LucideAll
+      module_name: MyAppWeb.Components.LucideAll,
+      icons: :all,
+      # icons to skip
+      exclude: ["arrow-left"]
+    ],
+    custom: [
+      # icon set read from a folder instead of a downloaded release
+      path: "dev/icons",
+      module_path: "output/custom.ex",
+      module_name: MyAppWeb.Components.Custom,
+      global_attrs: false,
+      icons: :all
     ]
   ]
 ]

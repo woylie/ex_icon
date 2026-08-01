@@ -21,8 +21,6 @@
 
 ### Changed
 
-- Make `ExIcon.transform_svg/2` internal. The `ExIcon` module has no public
-  functions anymore.
 - Skip icons that use SVG elements or attributes that ExIcon does not know,
   which prevents scripts and event handlers from being added to generated
   components. Remove `metadata` elements and elements with a namespace prefix
@@ -42,6 +40,12 @@
 - Check the provider and the variants of every icon set before downloading or
   writing anything.
 - Nest the icon sets in the configuration file under an `icon_sets` key.
+- Rename `ExIcon.Lucide` and `ExIcon.SimpleIcons` to `ExIcon.Providers.Lucide`
+  and `ExIcon.Providers.SimpleIcons`.
+
+### Removed
+
+- Remove ExIcon.transform_svg/2.
 
 ### Fixed
 
@@ -77,15 +81,18 @@
 
 ### How to upgrade
 
-Move the icon sets in your configuration under an `icon_sets` key:
+Move the icon sets in your configuration under an `icon_sets` key, and rename
+the bundled providers:
 
 ```diff
  [
 -  lucide: [
+-    provider: ExIcon.Lucide,
 -    # ...
 -  ]
 +  icon_sets: [
 +    lucide: [
++      provider: ExIcon.Providers.Lucide,
 +      # ...
 +    ]
 +  ]

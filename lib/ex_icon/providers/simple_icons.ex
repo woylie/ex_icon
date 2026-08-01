@@ -1,4 +1,4 @@
-defmodule ExIcon.SimpleIcons do
+defmodule ExIcon.Providers.SimpleIcons do
   @moduledoc """
   ExIcon provider for Simple Icons.
 
