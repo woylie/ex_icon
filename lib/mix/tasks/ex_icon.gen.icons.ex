@@ -6,8 +6,10 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
 
       $ mix ex_icon.gen.icons
 
-  For every icon set in the configuration file, the release of the icon library
-  is downloaded and a module with a function component per icon is generated.
+  For every icon set in the configuration file, a module with a function
+  component per icon is generated. An icon set either names a provider and a
+  version, in which case the release of the icon library is downloaded, or a
+  folder that already holds the SVG files.
 
   Releases are cached, so regenerating the icons does not download them again.
   Paths in the configuration file are relative to the folder the task is run in.
@@ -75,20 +77,16 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
         refresh = opts[:refresh] == true
         force = opts[:force] == true
 
-        icon_sets = Keyword.fetch!(config, :icon_sets)
+        icon_sets =
+          config
+          |> Keyword.fetch!(:icon_sets)
+          |> select_icon_sets(opts[:icon_set])
 
         results =
-          do_run(icon_sets, cache_dir, opts[:icon_set], refresh, force: force)
+          download_and_generate_all(icon_sets, cache_dir, refresh, force: force)
 
-        IO.puts("""
-        Done.
-
-        Downloaded releases are cached in:
-
-            #{cache_dir}
-
-        Pass --refresh to download them again.
-        """)
+        IO.puts("Done.")
+        if Enum.any?(icon_sets, &downloaded?/1), do: report_cache(cache_dir)
 
         # a module that was not written makes the task fail, so that a check in
         # a pipeline does not pass with modules that are out of date
@@ -105,27 +103,39 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
     end
   end
 
-  defp do_run(config, cache_dir, nil, refresh?, write_opts) do
-    download_and_generate_all(config, cache_dir, refresh?, write_opts)
+  defp select_icon_sets(icon_sets, nil), do: icon_sets
+
+  defp select_icon_sets(icon_sets, name) when is_binary(name) do
+    key = String.to_atom(name)
+
+    case Keyword.fetch(icon_sets, key) do
+      {:ok, opts} ->
+        [{key, opts}]
+
+      :error ->
+        IO.puts("""
+        Icon set #{key} not found in configuration.
+
+        Available icon sets:
+
+            #{inspect(Keyword.keys(icon_sets))}
+        """)
+
+        exit({:shutdown, 1})
+    end
   end
 
-  defp do_run(config, cache_dir, icon_set, refresh?, write_opts)
-       when is_binary(icon_set) do
-    icon_set = String.to_atom(icon_set)
+  defp downloaded?({_name, opts}), do: Keyword.has_key?(opts, :provider)
 
-    if opts = Keyword.get(config, icon_set) do
-      download_and_generate({icon_set, opts}, cache_dir, refresh?, write_opts)
-    else
-      IO.puts("""
-      Icon set #{icon_set} not found in configuration.
+  defp report_cache(cache_dir) do
+    IO.puts("""
 
-      Available icon sets:
+    Downloaded releases are cached in:
 
-          #{inspect(Keyword.keys(config))}
-      """)
+        #{cache_dir}
 
-      exit({:shutdown, 1})
-    end
+    Pass --refresh to download them again.
+    """)
   end
 
   defp download_and_generate_all(config, cache_dir, refresh?, write_opts) do
@@ -141,8 +151,7 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
   defp with_refresh_flags(config, refresh?) do
     {icon_sets, _seen} =
       Enum.map_reduce(config, MapSet.new(), fn {_name, opts} = icon_set, seen ->
-        release =
-          {Keyword.fetch!(opts, :provider), Keyword.fetch!(opts, :version)}
+        release = {Keyword.get(opts, :provider), Keyword.get(opts, :version)}
 
         refresh_release? = refresh? and not MapSet.member?(seen, release)
         {{icon_set, refresh_release?}, MapSet.put(seen, release)}
@@ -160,7 +169,7 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
     IO.puts("Processing #{config_name}...")
 
     targets = ExIcon.targets(opts)
-    icon_dir = ExIcon.download(cache_dir, opts, force: refresh?)
+    icon_dir = ExIcon.icon_dir(cache_dir, opts, force: refresh?)
 
     Enum.map(targets, fn {svg_folder, module_name, module_path} ->
       generate(

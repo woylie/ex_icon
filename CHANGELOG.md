@@ -15,6 +15,7 @@
 - Add `--cache-dir`, `--config`, `--force`, and `--refresh` arguments to
   `mix ex_icon.gen.icons`. See `mix help ex_icon.gen.icons`.
 - Add `exclude` configuration option to skip individual icons.
+- Add `path` configuration option to generate an icon set from a local folder.
 
 ### Changed
 
