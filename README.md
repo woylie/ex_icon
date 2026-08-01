@@ -34,7 +34,7 @@ ExIcon expects a configuration file named `.ex_icon.exs` in your project root.
   icon_sets: [
     lucide: [
       # A module implementing the `ExIcon.Provider` behaviour.
-      provider: ExIcon.Lucide,
+      provider: ExIcon.Providers.Lucide,
       # The release version of the icon library.
       version: "1.8.0",
       # The destination path of the icon module that ExIcon will generate.
@@ -215,7 +215,7 @@ need with the `variants` option:
 
 ```elixir
 heroicons: [
-  provider: ExIcon.Heroicons,
+  provider: ExIcon.Providers.Heroicons,
   version: "2.2.0",
   module_path: "lib/my_app_web/components/heroicons.ex",
   module_name: MyAppWeb.Components.Heroicons,
@@ -293,7 +293,7 @@ feather: [
 
 For a library that ships the same icons in several styles, implement the
 optional `c:ExIcon.Provider.variants/1` callback, which returns the folder of
-each style. `ExIcon.Heroicons` is an example.
+each style. `ExIcon.Providers.Heroicons` is an example.
 
 ## Versioning
 

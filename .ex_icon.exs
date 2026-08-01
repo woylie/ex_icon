@@ -1,7 +1,7 @@
 [
   icon_sets: [
     lucide: [
-      provider: ExIcon.Lucide,
+      provider: ExIcon.Providers.Lucide,
       version: "1.8.0",
       module_path: "output/lucide.ex",
       module_name: MyAppWeb.Components.Lucide,
@@ -27,7 +27,7 @@
       icons: ["arrow-left", "arrow-right"]
     ],
     simple_icons: [
-      provider: ExIcon.SimpleIcons,
+      provider: ExIcon.Providers.SimpleIcons,
       version: "16.15.0",
       module_path: "output/simple_icons.ex",
       module_name: MyAppWeb.Components.SimpleIcons,
@@ -38,7 +38,7 @@
       icons: ["helix", "mastodon"]
     ],
     heroicons: [
-      provider: ExIcon.Heroicons,
+      provider: ExIcon.Providers.Heroicons,
       version: "2.2.0",
       module_path: "output/heroicons.ex",
       module_name: MyAppWeb.Components.Heroicons,
@@ -50,7 +50,7 @@
       icons: ["academic-cap", "bell"]
     ],
     lucide_all: [
-      provider: ExIcon.Lucide,
+      provider: ExIcon.Providers.Lucide,
       version: "1.8.0",
       module_path: "output/lucide_all.ex",
       module_name: MyAppWeb.Components.LucideAll,

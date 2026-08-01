@@ -5,7 +5,7 @@ defmodule ExIcon.TargetTest do
     test "returns a single target without variants" do
       assert ExIcon.Target.targets(
                icons: :all,
-               provider: ExIcon.Lucide,
+               provider: ExIcon.Providers.Lucide,
                version: "1.8.0",
                module_path: "lib/components/lucide.ex",
                module_name: MyAppWeb.Components.Lucide
@@ -19,7 +19,7 @@ defmodule ExIcon.TargetTest do
     test "returns a target per configured variant" do
       assert ExIcon.Target.targets(
                icons: :all,
-               provider: ExIcon.Heroicons,
+               provider: ExIcon.Providers.Heroicons,
                version: "2.2.0",
                module_path: "lib/components/heroicons.ex",
                module_name: MyAppWeb.Components.Heroicons,
@@ -39,7 +39,7 @@ defmodule ExIcon.TargetTest do
       assert_raise ArgumentError, ~r/unknown variant :outlined/, fn ->
         ExIcon.Target.targets(
           icons: :all,
-          provider: ExIcon.Heroicons,
+          provider: ExIcon.Providers.Heroicons,
           version: "2.2.0",
           module_path: "lib/components/heroicons.ex",
           module_name: MyAppWeb.Components.Heroicons,
@@ -95,7 +95,7 @@ defmodule ExIcon.TargetTest do
         ExIcon.Target.targets(
           icons: :all,
           path: "assets/icons",
-          provider: ExIcon.Lucide,
+          provider: ExIcon.Providers.Lucide,
           version: "1.8.0",
           module_path: "lib/components/icons.ex",
           module_name: MyAppWeb.Components.Icons
@@ -107,7 +107,7 @@ defmodule ExIcon.TargetTest do
       assert_raise ArgumentError, ~r/icon set without a version/, fn ->
         ExIcon.Target.targets(
           icons: :all,
-          provider: ExIcon.Lucide,
+          provider: ExIcon.Providers.Lucide,
           module_path: "lib/components/icons.ex",
           module_name: MyAppWeb.Components.Icons
         )
@@ -127,16 +127,18 @@ defmodule ExIcon.TargetTest do
     end
 
     test "raises if the provider has no variants" do
-      assert_raise ArgumentError, ~r/not supported by ExIcon.Lucide/, fn ->
-        ExIcon.Target.targets(
-          icons: :all,
-          provider: ExIcon.Lucide,
-          version: "1.8.0",
-          module_path: "lib/components/lucide.ex",
-          module_name: MyAppWeb.Components.Lucide,
-          variants: [:outline]
-        )
-      end
+      assert_raise ArgumentError,
+                   ~r/not supported by ExIcon.Providers.Lucide/,
+                   fn ->
+                     ExIcon.Target.targets(
+                       icons: :all,
+                       provider: ExIcon.Providers.Lucide,
+                       version: "1.8.0",
+                       module_path: "lib/components/lucide.ex",
+                       module_name: MyAppWeb.Components.Lucide,
+                       variants: [:outline]
+                     )
+                   end
     end
   end
 end

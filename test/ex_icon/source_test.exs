@@ -203,13 +203,13 @@ defmodule ExIcon.SourceTest do
     } do
       opts = [
         icons: :all,
-        provider: ExIcon.Lucide,
+        provider: ExIcon.Providers.Lucide,
         version: "1.8.0",
         module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
         module_name: MyAppWeb.Components.Lucide
       ]
 
-      icon_dir = Path.join([tmp_dir, "ex_icon_lucide", "1.8.0"])
+      icon_dir = Path.join([tmp_dir, "ex_icon_providers_lucide", "1.8.0"])
       svg_dir = Path.join(icon_dir, "icons")
       File.mkdir_p!(svg_dir)
       File.write!(Path.join(svg_dir, "cached.svg"), "<svg></svg>")

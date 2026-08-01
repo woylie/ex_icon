@@ -1,7 +1,7 @@
-defmodule ExIcon.SimpleIconsTest do
+defmodule ExIcon.Providers.SimpleIconsTest do
   use ExUnit.Case, async: true
 
-  alias ExIcon.SimpleIcons
+  alias ExIcon.Providers.SimpleIcons
 
   describe "release_url/1" do
     test "returns the url of the tagged release archive" do

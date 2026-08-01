@@ -14,7 +14,7 @@ defmodule ExIconTest do
 
       opts = [
         icons: [icon_name],
-        provider: ExIcon.Lucide,
+        provider: ExIcon.Providers.Lucide,
         version: "1.8.0",
         module_path: module_path,
         module_name: MyAppWeb.Components.Lucide,
@@ -65,7 +65,7 @@ defmodule ExIconTest do
 
       opts = [
         icons: :all,
-        provider: ExIcon.Lucide,
+        provider: ExIcon.Providers.Lucide,
         version: "1.8.0",
         module_path: module_path,
         module_name: MyAppWeb.Components.Lucide
@@ -98,7 +98,7 @@ defmodule ExIconTest do
     test "ignores folders that look like svg files", %{tmp_dir: tmp_dir} do
       opts = [
         icons: :all,
-        provider: ExIcon.Lucide,
+        provider: ExIcon.Providers.Lucide,
         version: "1.8.0",
         module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
         module_name: MyAppWeb.Components.Lucide
@@ -124,7 +124,7 @@ defmodule ExIconTest do
     } do
       opts = [
         icons: ["arrow-left", "does-not-exist"],
-        provider: ExIcon.Lucide,
+        provider: ExIcon.Providers.Lucide,
         version: "1.8.0",
         module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
         module_name: MyAppWeb.Components.Lucide
@@ -146,7 +146,7 @@ defmodule ExIconTest do
     test "skips an icon of :all that cannot be read", %{tmp_dir: tmp_dir} do
       opts = [
         icons: :all,
-        provider: ExIcon.Lucide,
+        provider: ExIcon.Providers.Lucide,
         version: "1.8.0",
         module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
         module_name: MyAppWeb.Components.Lucide
@@ -174,7 +174,7 @@ defmodule ExIconTest do
 
       opts = [
         icons: :all,
-        provider: ExIcon.Lucide,
+        provider: ExIcon.Providers.Lucide,
         version: "1.8.0",
         module_path: module_path,
         module_name: MyAppWeb.Components.Lucide
@@ -206,7 +206,7 @@ defmodule ExIconTest do
     test "prefixes icon names that start with a digit", %{tmp_dir: tmp_dir} do
       opts = [
         icons: ["1password"],
-        provider: ExIcon.SimpleIcons,
+        provider: ExIcon.Providers.SimpleIcons,
         version: "15.0.0",
         module_path: Path.join(tmp_dir, "lib/components/simple_icons.ex"),
         module_name: MyAppWeb.Components.SimpleIcons
@@ -226,7 +226,7 @@ defmodule ExIconTest do
     } do
       opts = [
         icons: :all,
-        provider: ExIcon.Lucide,
+        provider: ExIcon.Providers.Lucide,
         version: "1.8.0",
         module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
         module_name: MyAppWeb.Components.Lucide
@@ -254,7 +254,7 @@ defmodule ExIconTest do
       opts = [
         icons: :all,
         global_attrs: true,
-        provider: ExIcon.Lucide,
+        provider: ExIcon.Providers.Lucide,
         version: "1.8.0",
         module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
         module_name: MyAppWeb.Components.Lucide
@@ -278,7 +278,7 @@ defmodule ExIconTest do
       opts = [
         icons: :all,
         exclude: ["arrow-right"],
-        provider: ExIcon.Lucide,
+        provider: ExIcon.Providers.Lucide,
         version: "1.8.0",
         module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
         module_name: MyAppWeb.Components.Lucide
@@ -297,7 +297,7 @@ defmodule ExIconTest do
     test "skips and reports icons that cannot be parsed", %{tmp_dir: tmp_dir} do
       opts = [
         icons: ["arrow-left", "broken"],
-        provider: ExIcon.Lucide,
+        provider: ExIcon.Providers.Lucide,
         version: "1.8.0",
         module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
         module_name: MyAppWeb.Components.Lucide
@@ -326,7 +326,7 @@ defmodule ExIconTest do
     } do
       opts = [
         icons: :all,
-        provider: ExIcon.Lucide,
+        provider: ExIcon.Providers.Lucide,
         version: "1.8.0",
         module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
         module_name: MyAppWeb.Components.Lucide
@@ -364,7 +364,7 @@ defmodule ExIconTest do
     } do
       opts = [
         icons: ["1password", "icon-1password"],
-        provider: ExIcon.SimpleIcons,
+        provider: ExIcon.Providers.SimpleIcons,
         version: "15.0.0",
         module_path: Path.join(tmp_dir, "lib/components/simple_icons.ex"),
         module_name: MyAppWeb.Components.SimpleIcons
@@ -503,7 +503,7 @@ defmodule ExIconTest do
         icon_sets: [
           lucide: [
             icons: ["arrow-left", "arrow-right"],
-            provider: ExIcon.Lucide,
+            provider: ExIcon.Providers.Lucide,
             version: "1.8.0",
             module_path: "lib/my_app_web/components/lucide.ex",
             module_name: MyAppWeb.Components.Lucide,
@@ -532,7 +532,7 @@ defmodule ExIconTest do
       config = [
         lucide: %{
           icons: ["arrow-left", "arrow-right"],
-          provider: ExIcon.Lucide,
+          provider: ExIcon.Providers.Lucide,
           version: "1.8.0",
           module_path: "lib/my_app_web/components/lucide.ex",
           module_name: MyAppWeb.Components.Lucide
@@ -552,7 +552,7 @@ defmodule ExIconTest do
       config = [
         lucide: [
           icons: ["arrow-left", "arrow-right"],
-          provider: ExIcon.Lucide,
+          provider: ExIcon.Providers.Lucide,
           version: "1.8.0",
           module_path: "lib/my_app_web/components/lucide.ex",
           module_name: MyAppWeb.Components.Lucide,
@@ -567,7 +567,7 @@ defmodule ExIconTest do
       config = [
         lucide: [
           icons: :all,
-          provider: ExIcon.Lucide,
+          provider: ExIcon.Providers.Lucide,
           version: "1.8.0",
           module_path: "lib/my_app_web/components/lucide.ex",
           module_name: MyAppWeb.Components.Lucide,
@@ -817,7 +817,7 @@ defmodule ExIconTest do
   defp config_with_attrs(attrs) do
     [
       icons: :all,
-      provider: ExIcon.Lucide,
+      provider: ExIcon.Providers.Lucide,
       version: "1.8.0",
       module_path: "lib/my_app_web/components/lucide.ex",
       module_name: MyAppWeb.Components.Lucide,

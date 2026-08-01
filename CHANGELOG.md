@@ -42,6 +42,8 @@
 - Check the provider and the variants of every icon set before downloading or
   writing anything.
 - Nest the icon sets in the configuration file under an `icon_sets` key.
+- Rename `ExIcon.Lucide` and `ExIcon.SimpleIcons` to `ExIcon.Providers.Lucide`
+  and `ExIcon.Providers.SimpleIcons`.
 
 ### Fixed
 
@@ -77,15 +79,18 @@
 
 ### How to upgrade
 
-Move the icon sets in your configuration under an `icon_sets` key:
+Move the icon sets in your configuration under an `icon_sets` key, and rename
+the bundled providers:
 
 ```diff
  [
 -  lucide: [
+-    provider: ExIcon.Lucide,
 -    # ...
 -  ]
 +  icon_sets: [
 +    lucide: [
++      provider: ExIcon.Providers.Lucide,
 +      # ...
 +    ]
 +  ]

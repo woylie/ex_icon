@@ -1,4 +1,4 @@
-defmodule ExIcon.Heroicons do
+defmodule ExIcon.Providers.Heroicons do
   @moduledoc """
   ExIcon provider for Heroicons.
 
