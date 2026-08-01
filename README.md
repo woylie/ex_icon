@@ -30,26 +30,28 @@ ExIcon expects a configuration file named `.ex_icon.exs` in your project root.
 
 ```elixir
 [
-  lucide: [
-    # Either list only the icons you want to generate, or set to `:all` to
-    # generate all available icons.
-    icons: ["arrow-left", "arrow-right"],
-    # Icon names to skip, which is mostly useful with `icons: :all`.
-    exclude: [],
-    # A module implementing the `ExIcon.Provider` behaviour.
-    provider: ExIcon.Lucide,
-    # The release version of the icon library.
-    version: "1.8.0",
-    # The destination path of the icon module that ExIcon will generate for you.
-    module_path: "lib/my_app_web/components/lucide.ex",
-    # The name of the generated module.
-    module_name: MyAppWeb.Components.Lucide,
-    # SVG attributes to turn into component attributes, to override, or to add.
-    # Example: ["stroke", {"stroke-width", default: "1.5"}]
-    attrs: [],
-    # If supported by the provider, choose the style variants to generate
-    # Example: [:outline, :solid]
-    variants: []
+  icon_sets: [
+    lucide: [
+      # Either list only the icons you want to generate, or set to `:all` to
+      # generate all available icons.
+      icons: ["arrow-left", "arrow-right"],
+      # Icon names to skip, which is mostly useful with `icons: :all`.
+      exclude: [],
+      # A module implementing the `ExIcon.Provider` behaviour.
+      provider: ExIcon.Lucide,
+      # The release version of the icon library.
+      version: "1.8.0",
+      # The destination path of the icon module that ExIcon will generate.
+      module_path: "lib/my_app_web/components/lucide.ex",
+      # The name of the generated module.
+      module_name: MyAppWeb.Components.Lucide,
+      # SVG attributes to turn into component attributes, to override, or to
+      # add. Example: ["stroke", {"stroke-width", default: "1.5"}]
+      attrs: [],
+      # If supported by the provider, choose the style variants to generate
+      # Example: [:outline, :solid]
+      variants: []
+    ]
   ]
 ]
 ```

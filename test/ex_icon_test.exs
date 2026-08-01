@@ -939,8 +939,7 @@ defmodule ExIconTest do
           provider: NoSuchProvider,
           version: "1.0.0",
           module_path: "lib/components/icons.ex",
-          module_name: MyAppWeb.Components.Icons,
-          variants: [:outline]
+          module_name: MyAppWeb.Components.Icons
         )
       end
     end
@@ -1369,20 +1368,24 @@ defmodule ExIconTest do
     @describetag :tmp_dir
     test "returns a valid configuration", %{tmp_dir: tmp_dir} do
       config = [
-        lucide: [
-          icons: ["arrow-left", "arrow-right"],
-          provider: ExIcon.Lucide,
-          version: "1.8.0",
-          module_path: "lib/my_app_web/components/lucide.ex",
-          module_name: MyAppWeb.Components.Lucide,
-          attrs: ["stroke"]
+        icon_sets: [
+          lucide: [
+            icons: ["arrow-left", "arrow-right"],
+            provider: ExIcon.Lucide,
+            version: "1.8.0",
+            module_path: "lib/my_app_web/components/lucide.ex",
+            module_name: MyAppWeb.Components.Lucide,
+            attrs: ["stroke"]
+          ]
         ]
       ]
 
       path = Path.join(tmp_dir, ".ex_icon.exs")
       File.write!(path, inspect(config))
 
-      assert {:ok, [lucide: read_config]} = ExIcon.read_config(path)
+      assert {:ok, [icon_sets: [lucide: read_config]]} =
+               ExIcon.read_config(path)
+
       assert Keyword.get(read_config, :icons) == ["arrow-left", "arrow-right"]
       assert Keyword.get(read_config, :attrs) == ["stroke"]
       assert Keyword.get(read_config, :variants) == []
@@ -1424,7 +1427,7 @@ defmodule ExIconTest do
         ]
       ]
 
-      assert {:ok, _} = ExIcon.validate_config(config)
+      assert {:ok, _} = validate_icon_sets(config)
     end
 
     test "returns schema that accepts config with all icons" do
@@ -1438,12 +1441,12 @@ defmodule ExIconTest do
         ]
       ]
 
-      assert {:ok, _} = ExIcon.validate_config(config)
+      assert {:ok, _} = validate_icon_sets(config)
     end
 
     test "accepts attribute options" do
       assert {:ok, _} =
-               ExIcon.validate_config(
+               validate_icon_sets(
                  lucide:
                    config_with_attrs([
                      "stroke",
@@ -1458,7 +1461,7 @@ defmodule ExIconTest do
 
     test "returns error if attribute sets both a default and a fixed value" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               ExIcon.validate_config(
+               validate_icon_sets(
                  lucide:
                    config_with_attrs([{"stroke", default: "red", fixed: "red"}])
                )
@@ -1468,7 +1471,7 @@ defmodule ExIconTest do
 
     test "returns error regardless of the order of the attribute options" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               ExIcon.validate_config(
+               validate_icon_sets(
                  lucide:
                    config_with_attrs([{"stroke", fixed: "red", default: "red"}])
                )
@@ -1478,7 +1481,7 @@ defmodule ExIconTest do
 
     test "returns error if an attribute sets both values and a fixed value" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               ExIcon.validate_config(
+               validate_icon_sets(
                  lucide:
                    config_with_attrs([
                      {"stroke", fixed: "red", values: ["red", "blue"]}
@@ -1490,7 +1493,7 @@ defmodule ExIconTest do
 
     test "returns error if an attribute is configured more than once" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               ExIcon.validate_config(
+               validate_icon_sets(
                  lucide:
                    config_with_attrs([
                      {"stroke", default: "red"},
@@ -1504,7 +1507,7 @@ defmodule ExIconTest do
 
     test "returns error if an attribute sets both a default and required" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               ExIcon.validate_config(
+               validate_icon_sets(
                  lucide:
                    config_with_attrs([
                      {"stroke", default: "red", required: true}
@@ -1516,7 +1519,7 @@ defmodule ExIconTest do
 
     test "returns error if an attribute sets both required and a fixed value" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               ExIcon.validate_config(
+               validate_icon_sets(
                  lucide:
                    config_with_attrs([{"stroke", required: true, fixed: "red"}])
                )
@@ -1526,7 +1529,7 @@ defmodule ExIconTest do
 
     test "returns error if a nil default is not one of the values" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               ExIcon.validate_config(
+               validate_icon_sets(
                  lucide:
                    config_with_attrs([
                      {"stroke-width", values: ["2", "4"], default: nil}
@@ -1539,7 +1542,7 @@ defmodule ExIconTest do
 
     test "accepts a nil default if nil is one of the values" do
       assert {:ok, _} =
-               ExIcon.validate_config(
+               validate_icon_sets(
                  lucide:
                    config_with_attrs([
                      {"stroke-width", values: ["2", "4", nil], default: nil}
@@ -1549,7 +1552,7 @@ defmodule ExIconTest do
 
     test "returns error if the values list is empty" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               ExIcon.validate_config(
+               validate_icon_sets(
                  lucide: config_with_attrs([{"stroke", values: []}])
                )
 
@@ -1558,14 +1561,14 @@ defmodule ExIconTest do
 
     test "returns error if attrs is not a list" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               ExIcon.validate_config(lucide: config_with_attrs("stroke"))
+               validate_icon_sets(lucide: config_with_attrs("stroke"))
 
       assert Exception.message(error) =~ "expected a list of attributes"
     end
 
     test "returns error if an attribute is neither a string nor a tuple" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               ExIcon.validate_config(lucide: config_with_attrs([:stroke]))
+               validate_icon_sets(lucide: config_with_attrs([:stroke]))
 
       assert Exception.message(error) =~
                "expected an attribute name or a {name, options} tuple"
@@ -1573,7 +1576,7 @@ defmodule ExIconTest do
 
     test "returns error if the default is not one of the values" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               ExIcon.validate_config(
+               validate_icon_sets(
                  lucide:
                    config_with_attrs([
                      {"stroke-linecap",
@@ -1587,7 +1590,7 @@ defmodule ExIconTest do
 
     test "returns error if an attribute has an unknown option" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               ExIcon.validate_config(
+               validate_icon_sets(
                  lucide: config_with_attrs([{"stroke", fallback: "red"}])
                )
 
@@ -1597,13 +1600,17 @@ defmodule ExIconTest do
 
     test "returns error if an attribute value is not a string" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               ExIcon.validate_config(
+               validate_icon_sets(
                  lucide: config_with_attrs([{"stroke-width", default: 2}])
                )
 
       assert Exception.message(error) =~
                ~s(invalid value for :default option: expected string, got: 2)
     end
+  end
+
+  defp validate_icon_sets(icon_sets) do
+    ExIcon.validate_config(icon_sets: icon_sets)
   end
 
   defp config_with_attrs(attrs) do

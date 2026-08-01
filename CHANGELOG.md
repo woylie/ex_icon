@@ -36,6 +36,9 @@
 - Add connect and receive timeouts to the release download.
 - Fail if a module was not written.
 - Fail if an icon listed in the configuration was not generated.
+- Check the provider and the variants of every icon set before downloading or
+  writing anything.
+- Nest the icon sets in the configuration file under an `icon_sets` key.
 
 ### Fixed
 
@@ -68,6 +71,23 @@
   Previously, an icon file could end the heredoc of a component and add code to
   the module, or add a HEEx expression that was evaluated every time the
   component was rendered.
+
+### How to upgrade
+
+Move the icon sets in your configuration under an `icon_sets` key:
+
+```diff
+ [
+-  lucide: [
+-    # ...
+-  ]
++  icon_sets: [
++    lucide: [
++      # ...
++    ]
++  ]
+ ]
+```
 
 ## [0.3.0] - 2026-04-10
 
