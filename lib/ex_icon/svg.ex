@@ -352,7 +352,6 @@ defmodule ExIcon.SVG do
     |> String.replace("}", "&rbrace;")
   end
 
-  @doc false
   def escape_attribute(value) do
     value
     |> String.replace("&", "&amp;")

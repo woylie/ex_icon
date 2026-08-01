@@ -4,7 +4,6 @@ defmodule ExIcon.Attrs do
   # Merges the attributes of an SVG file with the ones from the `attrs` and
   # `global_attrs` options, and renders them into the tag of a component.
 
-  @doc false
   @spec transform_svg(svg, attrs) :: {svg, component_attrs}
         when svg: binary,
              attrs: [binary | {binary, keyword}],
@@ -20,7 +19,6 @@ defmodule ExIcon.Attrs do
     end
   end
 
-  @doc false
   def transform_parsed({svg_attrs, inner}, attrs, global_attrs \\ false) do
     merged = merge_attrs(svg_attrs, normalize_attrs(attrs))
 
@@ -41,7 +39,6 @@ defmodule ExIcon.Attrs do
   defp with_global_attrs(merged, false), do: merged
   defp with_global_attrs(merged, _global_attrs), do: [:global | merged]
 
-  @doc false
   def render_global_attr(false), do: ""
 
   def render_global_attr(opts) when opts in [true, []],
@@ -179,14 +176,12 @@ defmodule ExIcon.Attrs do
     end
   end
 
-  @doc false
   def render_attr_options(opts) do
     Enum.map_join(opts, ", ", fn {key, value} ->
       "#{key}: #{inspect(value)}"
     end)
   end
 
-  @doc false
   # converts HTML attributes and icon names to snake case; ignores casing
   def to_snake_case(v) when is_binary(v) do
     v
