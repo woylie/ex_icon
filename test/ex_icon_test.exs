@@ -994,12 +994,16 @@ defmodule ExIconTest do
       {icon_dir, output} = with_io(fn -> ExIcon.download(cache_dir, opts) end)
 
       assert output =~ "Downloading local_provider 1.0.0..."
-      assert icon_dir == Path.join([cache_dir, "local_provider", "1.0.0"])
+
+      assert icon_dir ==
+               Path.join([cache_dir, "ex_icon_test_local_provider", "1.0.0"])
 
       assert File.read!(Path.join([icon_dir, "icons", "arrow-left.svg"])) ==
                "<svg></svg>"
 
-      assert File.ls!(Path.join(cache_dir, "local_provider")) == ["1.0.0"]
+      assert File.ls!(Path.join(cache_dir, "ex_icon_test_local_provider")) == [
+               "1.0.0"
+             ]
     end
 
     test "reuses the cached release on the next call", %{
@@ -1008,7 +1012,9 @@ defmodule ExIconTest do
     } do
       capture_io(fn -> ExIcon.download(cache_dir, opts) end)
 
-      marker = Path.join([cache_dir, "local_provider", "1.0.0", "marker"])
+      marker =
+        Path.join([cache_dir, "ex_icon_test_local_provider", "1.0.0", "marker"])
+
       File.write!(marker, "kept")
 
       assert capture_io(fn -> ExIcon.download(cache_dir, opts) end) == ""
@@ -1021,7 +1027,9 @@ defmodule ExIconTest do
     } do
       capture_io(fn -> ExIcon.download(cache_dir, opts) end)
 
-      marker = Path.join([cache_dir, "local_provider", "1.0.0", "marker"])
+      marker =
+        Path.join([cache_dir, "ex_icon_test_local_provider", "1.0.0", "marker"])
+
       File.write!(marker, "discarded")
 
       assert capture_io(fn ->
@@ -1031,7 +1039,12 @@ defmodule ExIconTest do
       refute File.exists?(marker)
 
       assert File.exists?(
-               Path.join([cache_dir, "local_provider", "1.0.0", "icons"])
+               Path.join([
+                 cache_dir,
+                 "ex_icon_test_local_provider",
+                 "1.0.0",
+                 "icons"
+               ])
              )
     end
 
@@ -1039,7 +1052,7 @@ defmodule ExIconTest do
       cache_dir: cache_dir,
       opts: opts
     } do
-      icon_dir = Path.join([cache_dir, "local_provider", "1.0.0"])
+      icon_dir = Path.join([cache_dir, "ex_icon_test_local_provider", "1.0.0"])
       File.mkdir_p!(Path.dirname(icon_dir))
       File.write!(icon_dir, "not a folder")
 
@@ -1080,7 +1093,7 @@ defmodule ExIconTest do
         module_name: MyAppWeb.Components.Lucide
       ]
 
-      icon_dir = Path.join([tmp_dir, "lucide", "1.8.0"])
+      icon_dir = Path.join([tmp_dir, "ex_icon_lucide", "1.8.0"])
       svg_dir = Path.join(icon_dir, "icons")
       File.mkdir_p!(svg_dir)
       File.write!(Path.join(svg_dir, "cached.svg"), "<svg></svg>")
@@ -1098,7 +1111,9 @@ defmodule ExIconTest do
         module_name: MyAppWeb.Components.Icons
       ]
 
-      icon_dir = Path.join([tmp_dir, "unreachable_provider", "1.0.0"])
+      icon_dir =
+        Path.join([tmp_dir, "ex_icon_test_unreachable_provider", "1.0.0"])
+
       svg_dir = Path.join(icon_dir, "icons")
       File.mkdir_p!(svg_dir)
 
@@ -1130,8 +1145,16 @@ defmodule ExIconTest do
         end
       end)
 
-      refute File.dir?(Path.join([tmp_dir, "unreachable_provider", "1.0.0"]))
-      assert File.ls!(Path.join(tmp_dir, "unreachable_provider")) == []
+      refute File.dir?(
+               Path.join([
+                 tmp_dir,
+                 "ex_icon_test_unreachable_provider",
+                 "1.0.0"
+               ])
+             )
+
+      assert File.ls!(Path.join(tmp_dir, "ex_icon_test_unreachable_provider")) ==
+               []
     end
   end
 
@@ -1148,6 +1171,19 @@ defmodule ExIconTest do
           ExIcon.download(tmp_dir, opts)
         end
       end
+    end
+
+    test "keeps providers apart that share the last name segment", %{
+      tmp_dir: tmp_dir
+    } do
+      assert_raise RuntimeError, fn ->
+        ExIcon.download(tmp_dir,
+          provider: UnreachableProvider,
+          version: "1.0.0"
+        )
+      end
+
+      assert File.ls!(tmp_dir) == ["ex_icon_test_unreachable_provider"]
     end
   end
 

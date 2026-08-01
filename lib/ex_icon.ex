@@ -500,9 +500,8 @@ defmodule ExIcon do
   def download(cache_dir, opts, download_opts \\ []) do
     provider = Keyword.fetch!(opts, :provider)
     version = validate_version!(Keyword.fetch!(opts, :version))
-    provider_name = provider_name(provider)
 
-    icon_dir = Path.join([cache_dir, provider_name, version])
+    icon_dir = Path.join([cache_dir, cache_key(provider), version])
 
     if Keyword.get(download_opts, :force, false), do: File.rm_rf!(icon_dir)
     if !File.dir?(icon_dir), do: fill_cache!(icon_dir, provider, version)
@@ -687,6 +686,10 @@ defmodule ExIcon do
     |> Module.split()
     |> List.last()
     |> Macro.underscore()
+  end
+
+  defp cache_key(module) do
+    module |> Module.split() |> Enum.map_join("_", &Macro.underscore/1)
   end
 
   # the version ends up in the release URL and in the cache path
