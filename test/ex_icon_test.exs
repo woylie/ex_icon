@@ -939,8 +939,7 @@ defmodule ExIconTest do
           provider: NoSuchProvider,
           version: "1.0.0",
           module_path: "lib/components/icons.ex",
-          module_name: MyAppWeb.Components.Icons,
-          variants: [:outline]
+          module_name: MyAppWeb.Components.Icons
         )
       end
     end

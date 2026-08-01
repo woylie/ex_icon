@@ -127,6 +127,8 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
   end
 
   defp download_and_generate_all(config, cache_dir, refresh?, write_opts) do
+    Enum.each(config, fn {_name, opts} -> ExIcon.targets(opts) end)
+
     config
     |> with_refresh_flags(refresh?)
     |> Enum.flat_map(fn {icon_set, refresh_release?} ->

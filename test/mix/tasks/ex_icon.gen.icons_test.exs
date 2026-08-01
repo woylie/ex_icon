@@ -163,6 +163,24 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
     end
   end
 
+  test "checks every icon set before writing anything", %{tmp_dir: tmp_dir} do
+    write_config(tmp_dir,
+      icons: icon_set(tmp_dir),
+      broken:
+        icon_set(tmp_dir,
+          provider: NoSuchProvider,
+          module_path: Path.join(tmp_dir, "output/broken.ex"),
+          module_name: Broken
+        )
+    )
+
+    assert_raise ArgumentError, ~r/could not load the provider/, fn ->
+      run(tmp_dir)
+    end
+
+    refute File.exists?(Path.join(tmp_dir, "output/icons.ex"))
+  end
+
   test "generates only the named icon set", %{tmp_dir: tmp_dir} do
     write_config(tmp_dir,
       icons: icon_set(tmp_dir),

@@ -534,6 +534,8 @@ defmodule ExIcon do
     module_name = Keyword.fetch!(opts, :module_name)
     module_path = Keyword.fetch!(opts, :module_path)
 
+    load_provider!(provider)
+
     case Keyword.get(opts, :variants, []) do
       [] ->
         [{provider.svg_folder(version), module_name, module_path}]
@@ -549,25 +551,28 @@ defmodule ExIcon do
     end
   end
 
+  defp load_provider!(provider) do
+    if Code.ensure_loaded?(provider) do
+      :ok
+    else
+      raise ArgumentError, """
+      could not load the provider #{inspect(provider)}
+
+      Make sure the module exists and is compiled.
+      """
+    end
+  end
+
   defp available_variants!(provider, version) do
-    cond do
-      not Code.ensure_loaded?(provider) ->
-        raise ArgumentError, """
-        could not load the provider #{inspect(provider)}
+    if function_exported?(provider, :variants, 1) do
+      provider.variants(version)
+    else
+      raise ArgumentError, """
+      the :variants option is not supported by #{inspect(provider)}
 
-        Make sure the module exists and is compiled.
-        """
-
-      not function_exported?(provider, :variants, 1) ->
-        raise ArgumentError, """
-        the :variants option is not supported by #{inspect(provider)}
-
-        Only providers that implement the optional variants/1 callback of the
-        ExIcon.Provider behaviour have variants to choose from.
-        """
-
-      true ->
-        provider.variants(version)
+      Only providers that implement the optional variants/1 callback of the
+      ExIcon.Provider behaviour have variants to choose from.
+      """
     end
   end
 
