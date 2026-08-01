@@ -198,9 +198,8 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
     IO.puts("Generating #{inspect(module_name)}...")
 
     assigns =
-      svg_dir
-      |> ExIcon.Components.prepare_assigns(opts)
-      |> Keyword.put(:module_name, module_name)
+      [module_name: module_name] ++
+        ExIcon.Components.prepare_assigns(svg_dir, opts)
 
     {formatter, _opts} = Format.formatter_for_file(module_path)
 

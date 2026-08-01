@@ -6,7 +6,6 @@ defmodule ExIcon.Components do
   # transforms the files.
 
   def prepare_assigns(path, opts) do
-    module_name = Keyword.fetch!(opts, :module_name)
     attrs = Keyword.get(opts, :attrs, [])
     global_attrs = Keyword.get(opts, :global_attrs, false)
 
@@ -39,7 +38,7 @@ defmodule ExIcon.Components do
 
     if configured != :all, do: ensure_nothing_missing!(wanted, icons)
 
-    [icons: icons, module_name: module_name, global_attrs: global_attrs]
+    [icons: icons, global_attrs: global_attrs]
   end
 
   # raise if icon listed in the configuration is missing

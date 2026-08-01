@@ -37,7 +37,6 @@ defmodule ExIcon.ComponentsTest do
 
       assert [
                icons: [{name, {transformed_svg, attrs}}],
-               module_name: MyAppWeb.Components.Lucide,
                global_attrs: false
              ] = ExIcon.Components.prepare_assigns(tmp_dir, opts)
 
@@ -87,7 +86,6 @@ defmodule ExIcon.ComponentsTest do
 
       assert [
                icons: [{"arrow_left", {_transformed_svg, _attrs}}],
-               module_name: MyAppWeb.Components.Lucide,
                global_attrs: false
              ] =
                ExIcon.Components.prepare_assigns(tmp_dir, opts)
@@ -109,7 +107,6 @@ defmodule ExIcon.ComponentsTest do
         capture_io(fn ->
           assert [
                    icons: [{"arrow_left", _}],
-                   module_name: MyAppWeb.Components.Lucide,
                    global_attrs: false
                  ] = ExIcon.Components.prepare_assigns(tmp_dir, opts)
         end)
@@ -159,7 +156,6 @@ defmodule ExIcon.ComponentsTest do
         capture_io(fn ->
           assert [
                    icons: [{"arrow_left", _}],
-                   module_name: MyAppWeb.Components.Lucide,
                    global_attrs: false
                  ] = ExIcon.Components.prepare_assigns(tmp_dir, opts)
         end)
@@ -198,7 +194,6 @@ defmodule ExIcon.ComponentsTest do
 
       assert ExIcon.Components.prepare_assigns(tmp_dir, opts) == [
                icons: [],
-               module_name: MyAppWeb.Components.Lucide,
                global_attrs: false
              ]
     end
@@ -216,7 +211,6 @@ defmodule ExIcon.ComponentsTest do
 
       assert [
                icons: [{"icon_1password", _}],
-               module_name: MyAppWeb.Components.SimpleIcons,
                global_attrs: false
              ] = ExIcon.Components.prepare_assigns(tmp_dir, opts)
     end
@@ -240,7 +234,6 @@ defmodule ExIcon.ComponentsTest do
         capture_io(fn ->
           assert [
                    icons: [{"arrow_left", _}],
-                   module_name: MyAppWeb.Components.Lucide,
                    global_attrs: false
                  ] = ExIcon.Components.prepare_assigns(tmp_dir, opts)
         end)
@@ -267,7 +260,6 @@ defmodule ExIcon.ComponentsTest do
 
       assert [
                icons: [{"arrow_left", {svg, []}}],
-               module_name: MyAppWeb.Components.Lucide,
                global_attrs: true
              ] = ExIcon.Components.prepare_assigns(tmp_dir, opts)
 
@@ -289,7 +281,6 @@ defmodule ExIcon.ComponentsTest do
 
       assert [
                icons: [{"arrow_left", _}],
-               module_name: MyAppWeb.Components.Lucide,
                global_attrs: false
              ] = ExIcon.Components.prepare_assigns(tmp_dir, opts)
     end
@@ -346,7 +337,10 @@ defmodule ExIcon.ComponentsTest do
       </title></svg>
       """)
 
-      assigns = ExIcon.Components.prepare_assigns(tmp_dir, opts)
+      assigns =
+        [module_name: MyAppWeb.Components.Lucide] ++
+          ExIcon.Components.prepare_assigns(tmp_dir, opts)
+
       source = EEx.eval_file(ExIcon.Template.template_path(), assigns: assigns)
 
       functions =
