@@ -12,7 +12,7 @@
   Each variant is generated into a module of its own, from a single download.
 - Add provider for Heroicons, which has outlined and filled variants in
   several sizes.
-- Add `--config`, `--force`, and `--cache-dir` arguments to
+- Add `--cache-dir`, `--config`, `--force`, and `--refresh` arguments to
   `mix ex_icon.gen.icons`. See `mix help ex_icon.gen.icons`.
 - Add `exclude` configuration option to skip individual icons.
 
@@ -34,6 +34,8 @@
 - Only move a release into the cache once it is complete, so that an
   interrupted run does not leave a partial release behind.
 - Add connect and receive timeouts to the release download.
+- Fail if a module was not written.
+- Fail if an icon listed in the configuration was not generated.
 
 ### Fixed
 

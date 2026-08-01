@@ -18,9 +18,14 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
       to the Mix cache folder
     * `--config` - the path of the configuration file, defaults to
       `.ex_icon.exs` in the folder the task is run in
-    * `--force` - discards the cached releases and downloads them again
+    * `--force` - overwrites the generated modules without asking
     * `--icon-set` - only generates the given icon set, which must be one of
       the top level keys in the configuration file
+    * `--refresh` - discards the cached releases and downloads them again
+
+  The task fails if a module was not written, so that a pipeline that
+  regenerates the icons does not pass with modules that are out of date. Pass
+  `--force` to write them without being asked.
 
   ## Examples
 
@@ -30,7 +35,11 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
 
   Generate a single icon set and download its release again:
 
-      $ mix ex_icon.gen.icons --icon-set lucide --force
+      $ mix ex_icon.gen.icons --icon-set lucide --refresh
+
+  Regenerate the icons in a pipeline:
+
+      $ mix ex_icon.gen.icons --force
 
   Read the configuration from a different path:
 
@@ -46,7 +55,8 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
       cache_dir: :string,
       config: :string,
       icon_set: :string,
-      force: :boolean
+      force: :boolean,
+      refresh: :boolean
     ]
   ]
 
@@ -62,7 +72,11 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
         cache_dir =
           opts[:cache_dir] || Path.join(Mix.Utils.mix_cache(), @cache_dir)
 
-        do_run(config, cache_dir, opts[:icon_set], opts[:force] == true)
+        refresh = opts[:refresh] == true
+        force = opts[:force] == true
+
+        results =
+          do_run(config, cache_dir, opts[:icon_set], refresh, force: force)
 
         IO.puts("""
         Done.
@@ -71,8 +85,12 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
 
             #{cache_dir}
 
-        Pass --force to download them again.
+        Pass --refresh to download them again.
         """)
+
+        # a module that was not written makes the task fail, so that a check in
+        # a pipeline does not pass with modules that are out of date
+        if :skipped in results, do: exit({:shutdown, 1})
 
       {:error, reason} ->
         IO.puts("""
@@ -85,15 +103,16 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
     end
   end
 
-  defp do_run(config, cache_dir, nil, force?) do
-    download_and_generate_all(config, cache_dir, force?)
+  defp do_run(config, cache_dir, nil, refresh?, write_opts) do
+    download_and_generate_all(config, cache_dir, refresh?, write_opts)
   end
 
-  defp do_run(config, cache_dir, icon_set, force?) when is_binary(icon_set) do
+  defp do_run(config, cache_dir, icon_set, refresh?, write_opts)
+       when is_binary(icon_set) do
     icon_set = String.to_atom(icon_set)
 
     if opts = Keyword.get(config, icon_set) do
-      download_and_generate({icon_set, opts}, cache_dir, force?)
+      download_and_generate({icon_set, opts}, cache_dir, refresh?, write_opts)
     else
       IO.puts("""
       Icon set #{icon_set} not found in configuration.
@@ -107,39 +126,50 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
     end
   end
 
-  defp download_and_generate_all(config, cache_dir, force?) do
+  defp download_and_generate_all(config, cache_dir, refresh?, write_opts) do
     config
-    |> with_force_flags(force?)
-    |> Enum.each(fn {icon_set, force_release?} ->
-      download_and_generate(icon_set, cache_dir, force_release?)
+    |> with_refresh_flags(refresh?)
+    |> Enum.flat_map(fn {icon_set, refresh_release?} ->
+      download_and_generate(icon_set, cache_dir, refresh_release?, write_opts)
     end)
   end
 
-  defp with_force_flags(config, force?) do
+  defp with_refresh_flags(config, refresh?) do
     {icon_sets, _seen} =
       Enum.map_reduce(config, MapSet.new(), fn {_name, opts} = icon_set, seen ->
         release =
           {Keyword.fetch!(opts, :provider), Keyword.fetch!(opts, :version)}
 
-        force_release? = force? and not MapSet.member?(seen, release)
-        {{icon_set, force_release?}, MapSet.put(seen, release)}
+        refresh_release? = refresh? and not MapSet.member?(seen, release)
+        {{icon_set, refresh_release?}, MapSet.put(seen, release)}
       end)
 
     icon_sets
   end
 
-  defp download_and_generate({config_name, opts}, cache_dir, force?) do
+  defp download_and_generate(
+         {config_name, opts},
+         cache_dir,
+         refresh?,
+         write_opts
+       ) do
     IO.puts("Processing #{config_name}...")
 
     targets = ExIcon.targets(opts)
-    icon_dir = ExIcon.download(cache_dir, opts, force: force?)
+    icon_dir = ExIcon.download(cache_dir, opts, force: refresh?)
 
-    Enum.each(targets, fn {svg_folder, module_name, module_path} ->
-      generate(Path.join(icon_dir, svg_folder), module_name, module_path, opts)
+    Enum.map(targets, fn {svg_folder, module_name, module_path} ->
+      generate(
+        Path.join(icon_dir, svg_folder),
+        module_name,
+        module_path,
+        opts,
+        write_opts
+      )
     end)
   end
 
-  defp generate(svg_dir, module_name, module_path, opts) do
+  defp generate(svg_dir, module_name, module_path, opts, write_opts) do
     IO.puts("Generating #{inspect(module_name)}...")
 
     assigns =
@@ -155,21 +185,25 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
       |> formatter.()
 
     ExIcon.verify_module!(contents)
-    write_module(module_path, contents)
+    write_module(module_path, contents, write_opts)
   end
 
-  defp write_module(module_path, contents) do
+  defp write_module(module_path, contents, write_opts) do
     relative_path = Path.relative_to_cwd(module_path)
+    create_opts = [quiet: true] ++ Keyword.take(write_opts, [:force])
 
     cond do
       File.read(module_path) == {:ok, contents} ->
         IO.puts("* #{relative_path} is unchanged")
+        :unchanged
 
-      Mix.Generator.create_file(module_path, contents, quiet: true) ->
+      Mix.Generator.create_file(module_path, contents, create_opts) ->
         IO.puts("* writing #{relative_path}")
+        :written
 
       true ->
         IO.puts("* skipping #{relative_path}")
+        :skipped
     end
   end
 end

@@ -27,7 +27,6 @@ end
 ## Usage
 
 ExIcon expects a configuration file named `.ex_icon.exs` in your project root.
-Pass `--config` to read it from a different path.
 
 ```elixir
 [
@@ -68,25 +67,11 @@ mix ex_icon.gen.icons
 Downloaded releases are cached in your Mix cache folder (`~/.cache/mix/ex_icon`
 on Linux, `~/Library/Caches/mix/ex_icon` on macOS), so regenerating your icons
 does not download the same release again. The exact path is printed after the
-task ran. To force a fresh download, run:
-
-```bash
-mix ex_icon.gen.icons --force
-```
-
-You can override the default cache folder with the `--cache-dir` argument.
-
-```bash
-mix ex_icon.gen.icons --cache-dir .cache/ex_icon
-```
-
-To read the configuration from a path other than `.ex_icon.exs`, run:
-
-```bash
-mix ex_icon.gen.icons --config config/icons.exs
-```
+task ran.
 
 Paths in the configuration file stay relative to the folder you run the task in.
+
+Run `mix help ex_icon.gen.icons` for the available command line arguments.
 
 ## Icon names
 
@@ -96,13 +81,15 @@ Each function component is named after its SVG file in snake case, so
 digit. `1password.svg` becomes `icon_1password`.
 
 Icons with names that cannot be turned into function names are skipped and
-reported.
+reported. If you listed such an icon in your configuration, the task fails
+instead.
 
 ## Icon contents
 
 ExIcon only keeps the SVG elements and attributes it knows. If an icon uses
 anything else, such as a `script` element or an `onclick` attribute, ExIcon
-skips the icon and prints the reason.
+skips the icon and prints the reason. If you listed such an icon in your
+configuration, the task fails instead.
 
 Attributes that load another document are not allowed. `href` and `xlink:href`
 may only point at an ID in the same file, and a `style` attribute may not
