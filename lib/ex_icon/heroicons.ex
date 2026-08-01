@@ -12,6 +12,8 @@ defmodule ExIcon.Heroicons do
   - `:mini` - filled icons on a 20x20 viewbox
   - `:micro` - filled icons on a 16x16 viewbox
 
+  Without the option, only the `:outline` variant is generated.
+
   Note that the variants differ in their attributes. The outlined icons have
   `stroke` and `stroke-width` attributes and a `fill` of `none`, while the
   filled ones only have a `fill` of `currentColor`. Attributes that a variant

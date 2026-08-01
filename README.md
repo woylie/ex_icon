@@ -5,11 +5,12 @@
 Generic icon library for Phoenix LiveView.
 
 - Downloads icon sets and generates Phoenix LiveView function components.
+- Generates components from a folder of your own SVG files.
 - Extensible via behaviour to support multiple icon libraries.
 - Icon library versions are set via configuration. Update your icons without
   updating this library.
 - Generate components for all icons or only the ones you need.
-- Customize the component attributes.
+- Customize the component attributes, or accept the global HTML attributes.
 - Dev-only dependency. The library is only used for generating icon modules.
 
 ## Installation
@@ -32,11 +33,6 @@ ExIcon expects a configuration file named `.ex_icon.exs` in your project root.
 [
   icon_sets: [
     lucide: [
-      # Either list only the icons you want to generate, or set to `:all` to
-      # generate all available icons.
-      icons: ["arrow-left", "arrow-right"],
-      # Icon names to skip, which is mostly useful with `icons: :all`.
-      exclude: [],
       # A module implementing the `ExIcon.Provider` behaviour.
       provider: ExIcon.Lucide,
       # The release version of the icon library.
@@ -45,15 +41,20 @@ ExIcon expects a configuration file named `.ex_icon.exs` in your project root.
       module_path: "lib/my_app_web/components/lucide.ex",
       # The name of the generated module.
       module_name: MyAppWeb.Components.Lucide,
+      # If supported by the provider, choose the style variants to generate
+      # Example: [:outline, :solid]
+      variants: [],
       # SVG attributes to turn into component attributes, to override, or to
       # add. Example: ["stroke", {"stroke-width", default: "1.5"}]
       attrs: [],
       # Whether the components accept the global HTML attributes. Can be a
       # boolean or a keyword list with options to pass to `attr`.
       global_attrs: false,
-      # If supported by the provider, choose the style variants to generate
-      # Example: [:outline, :solid]
-      variants: []
+      # Either list only the icons you want to generate, or set to `:all` to
+      # generate all available icons.
+      icons: ["arrow-left", "arrow-right"],
+      # Icon names to skip, which is mostly useful with `icons: :all`.
+      exclude: []
     ]
   ]
 ]
@@ -214,13 +215,13 @@ need with the `variants` option:
 
 ```elixir
 heroicons: [
-  icons: ["academic-cap", "bell"],
   provider: ExIcon.Heroicons,
   version: "2.2.0",
   module_path: "lib/my_app_web/components/heroicons.ex",
   module_name: MyAppWeb.Components.Heroicons,
   variants: [:outline, :solid],
-  attrs: ["stroke", "stroke-width", "fill"]
+  attrs: ["stroke", "stroke-width", "fill"],
+  icons: ["academic-cap", "bell"]
 ]
 ```
 
@@ -232,6 +233,9 @@ Each variant is generated into a separate module, with the variant appended to
 `lib/my_app_web/components/heroicons/solid.ex`. No module is written to the
 configured `module_path` itself.
 
+Without the option, ExIcon generates a single module from the variant that the
+provider falls back to, which is `:outline` for Heroicons.
+
 ## Local icon sets
 
 You can also generate an icon module from a local folder with SVG files by using
@@ -240,9 +244,9 @@ the `path` option instead of `provider` and `version`:
 ```elixir
 custom: [
   path: "assets/icons",
-  icons: :all,
   module_path: "lib/my_app_web/components/custom.ex",
-  module_name: MyAppWeb.Components.Custom
+  module_name: MyAppWeb.Components.Custom,
+  icons: :all
 ]
 ```
 
@@ -256,6 +260,40 @@ behaviour. The library currently supports these providers:
 - [Heroicons](https://heroicons.com/)
 - [Lucide](https://lucide.dev/)
 - [Simple Icons](https://simpleicons.org/)
+
+You can write a provider for any icon library that publishes its releases as a
+zip file. A provider tells ExIcon where to download a release, and where the
+SVG files are in it.
+
+```elixir
+defmodule MyApp.Feather do
+  @behaviour ExIcon.Provider
+
+  @impl true
+  def release_url(version) do
+    "https://github.com/feathericons/feather/archive/refs/tags/v#{version}.zip"
+  end
+
+  @impl true
+  def svg_folder(version), do: "feather-#{version}/icons"
+end
+```
+
+You can configure the module like any other provider in your configuration file:
+
+```elixir
+feather: [
+  provider: MyApp.Feather,
+  version: "4.29.2",
+  module_path: "lib/my_app_web/components/feather.ex",
+  module_name: MyAppWeb.Components.Feather,
+  icons: :all
+]
+```
+
+For a library that ships the same icons in several styles, implement the
+optional `c:ExIcon.Provider.variants/1` callback, which returns the folder of
+each style. `ExIcon.Heroicons` is an example.
 
 ## Versioning
 
