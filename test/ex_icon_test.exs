@@ -1161,6 +1161,14 @@ defmodule ExIconTest do
   describe "download/3 validation" do
     @describetag :tmp_dir
 
+    defmodule PlainHttpProvider do
+      @behaviour ExIcon.Provider
+      @impl true
+      def release_url(_), do: "http://example.com/icons.zip"
+      @impl true
+      def svg_folder(_), do: "icons"
+    end
+
     test "raises for a version that is not a plain version", %{
       tmp_dir: tmp_dir
     } do
@@ -1170,6 +1178,14 @@ defmodule ExIconTest do
         assert_raise ArgumentError, ~r/invalid version/, fn ->
           ExIcon.download(tmp_dir, opts)
         end
+      end
+    end
+
+    test "raises for a release URL that is not https", %{tmp_dir: tmp_dir} do
+      opts = [provider: PlainHttpProvider, version: "1.0.0"]
+
+      assert_raise ArgumentError, ~r/invalid release URL/, fn ->
+        ExIcon.download(tmp_dir, opts)
       end
     end
 

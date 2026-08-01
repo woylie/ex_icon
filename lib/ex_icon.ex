@@ -614,8 +614,34 @@ defmodule ExIcon do
     end
   end
 
+  # a release is fetched over https, except from the local machine, so that a
+  # provider can be developed against a local server
+  @loopback_hosts ~w(localhost 127.0.0.1 ::1 [::1])
+
+  defp validate_url!(url, provider) do
+    case URI.parse(url) do
+      %URI{scheme: "https"} ->
+        url
+
+      %URI{scheme: "http", host: host} when host in @loopback_hosts ->
+        url
+
+      _uri ->
+        raise ArgumentError, """
+        invalid release URL #{inspect(url)}
+
+        #{inspect(provider)} has to return an https URL, or an http URL of a
+        server on the local machine.
+        """
+    end
+  end
+
   defp download_icons!(provider, version) do
-    url = version |> provider.release_url() |> String.to_charlist()
+    url =
+      version
+      |> provider.release_url()
+      |> validate_url!(provider)
+      |> String.to_charlist()
 
     http_opts = [
       connect_timeout: :timer.seconds(30),
