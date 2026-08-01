@@ -39,18 +39,19 @@ defmodule ExIcon.Attrs do
     "\n  attr :rest, :global, " <> render_attr_options(opts)
   end
 
+  # specs and merged attributes share the shape {kind, name, value, options}
   defp normalize_attrs(attrs) do
     Enum.map(attrs, fn
       name when is_binary(name) ->
-        {name, :component, :none, []}
+        {:component, name, :none, []}
 
       {name, opts} when is_binary(name) and is_list(opts) ->
         case Keyword.fetch(opts, :fixed) do
           {:ok, value} ->
-            {name, :fixed, value, []}
+            {:fixed, name, value, []}
 
           :error ->
-            {name, :component, Keyword.get(opts, :default, :none),
+            {:component, name, Keyword.get(opts, :default, :none),
              component_opts(opts)}
         end
     end)
@@ -74,16 +75,15 @@ defmodule ExIcon.Attrs do
       Enum.map(svg_attrs, fn {name, value} ->
         case find_spec(specs, name) do
           nil -> {:fixed, name, value, []}
-          {_, kind, :none, opts} -> {kind, name, value, opts}
-          {_, kind, override, opts} -> {kind, name, override, opts}
+          {kind, _, :none, opts} -> {kind, name, value, opts}
+          {kind, _, override, opts} -> {kind, name, override, opts}
         end
       end)
 
     added =
-      for {name, kind, value, opts} <- specs,
-          value != :none or opts != [],
-          find_attr(svg_attrs, name) == nil,
-          do: {kind, name, value, opts}
+      Enum.filter(specs, fn {_kind, name, value, opts} ->
+        (value != :none or opts != []) and find_attr(svg_attrs, name) == nil
+      end)
 
     from_file ++ added ++ [aria_hidden(aria_spec, aria_attr)]
   end
@@ -112,12 +112,7 @@ defmodule ExIcon.Attrs do
   end
 
   defp aria_hidden(spec, file_attr) do
-    {spec_name, kind, value, opts} =
-      case spec do
-        nil -> {nil, :fixed, :none, []}
-        {name, kind, value, opts} -> {name, kind, value, opts}
-      end
-
+    {kind, spec_name, value, opts} = spec || {:fixed, nil, :none, []}
     {file_name, file_value} = file_attr || {nil, nil}
     name = file_name || spec_name || "aria-hidden"
 
@@ -135,11 +130,11 @@ defmodule ExIcon.Attrs do
 
   defp render_attr(:global), do: "{@rest}"
 
-  defp render_attr({:component, name, _value, _values}) do
+  defp render_attr({:component, name, _value, _opts}) do
     "#{name}={@#{to_snake_case(name)}}"
   end
 
-  defp render_attr({:fixed, name, value, _values}) do
+  defp render_attr({:fixed, name, value, _opts}) do
     ~s(#{name}="#{ExIcon.SVG.escape_attribute(value)}")
   end
 
@@ -150,7 +145,7 @@ defmodule ExIcon.Attrs do
 
   defp find_spec(specs, name) do
     name = String.downcase(name)
-    Enum.find(specs, fn {k, _, _, _} -> String.downcase(k) == name end)
+    Enum.find(specs, fn {_, k, _, _} -> String.downcase(k) == name end)
   end
 
   defp pop_attr(attrs, name) do
