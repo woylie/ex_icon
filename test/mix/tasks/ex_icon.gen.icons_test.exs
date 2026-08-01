@@ -116,7 +116,7 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
     refute output =~ "* writing"
   end
 
-  test "keeps a changed module if the overwrite is declined", %{
+  test "keeps a changed module and fails if the overwrite is declined", %{
     tmp_dir: tmp_dir
   } do
     write_config(tmp_dir, icons: icon_set(tmp_dir))
@@ -127,7 +127,8 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
 
     output =
       capture_io("n\n", fn ->
-        Mix.Task.rerun("ex_icon.gen.icons", args(tmp_dir))
+        assert catch_exit(Mix.Task.rerun("ex_icon.gen.icons", args(tmp_dir))) ==
+                 {:shutdown, 1}
       end)
 
     assert output =~ "skipping"

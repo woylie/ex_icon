@@ -37,6 +37,10 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
 
       $ mix ex_icon.gen.icons --icon-set lucide --refresh
 
+  Regenerate the icons in a pipeline:
+
+      $ mix ex_icon.gen.icons --force
+
   Read the configuration from a different path:
 
       $ mix ex_icon.gen.icons --config config/icons.exs
@@ -84,6 +88,10 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
         Pass --refresh to download them again.
         """)
 
+        # a module that was not written makes the task fail, so that a check in
+        # a pipeline does not pass with modules that are out of date
+        if :skipped in results, do: exit({:shutdown, 1})
+
       {:error, reason} ->
         IO.puts("""
         An error occurred.
@@ -121,7 +129,7 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
   defp download_and_generate_all(config, cache_dir, refresh?, write_opts) do
     config
     |> with_refresh_flags(refresh?)
-    |> Enum.each(fn {icon_set, refresh_release?} ->
+    |> Enum.flat_map(fn {icon_set, refresh_release?} ->
       download_and_generate(icon_set, cache_dir, refresh_release?, write_opts)
     end)
   end
@@ -150,7 +158,7 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
     targets = ExIcon.targets(opts)
     icon_dir = ExIcon.download(cache_dir, opts, force: refresh?)
 
-    Enum.each(targets, fn {svg_folder, module_name, module_path} ->
+    Enum.map(targets, fn {svg_folder, module_name, module_path} ->
       generate(
         Path.join(icon_dir, svg_folder),
         module_name,
@@ -187,12 +195,15 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
     cond do
       File.read(module_path) == {:ok, contents} ->
         IO.puts("* #{relative_path} is unchanged")
+        :unchanged
 
       Mix.Generator.create_file(module_path, contents, create_opts) ->
         IO.puts("* writing #{relative_path}")
+        :written
 
       true ->
         IO.puts("* skipping #{relative_path}")
+        :skipped
     end
   end
 end
