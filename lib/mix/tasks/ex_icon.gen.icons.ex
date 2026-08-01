@@ -154,6 +154,7 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
       |> EEx.eval_file(assigns: assigns)
       |> formatter.()
 
+    ExIcon.verify_module!(contents)
     write_module(module_path, contents)
   end
 

@@ -264,6 +264,72 @@ defmodule ExIconTest do
              ] = ExIcon.prepare_assigns(tmp_dir, opts)
     end
 
+    test "skips and reports icons that cannot be parsed", %{tmp_dir: tmp_dir} do
+      opts = [
+        icons: ["arrow-left", "broken"],
+        provider: ExIcon.Lucide,
+        version: "1.8.0",
+        module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
+        module_name: MyAppWeb.Components.Lucide
+      ]
+
+      File.write!(Path.join(tmp_dir, "arrow-left.svg"), "<svg></svg>")
+
+      File.write!(
+        Path.join(tmp_dir, "broken.svg"),
+        ~s|<svg><script>alert(1)</script></svg>|
+      )
+
+      output =
+        capture_io(fn ->
+          assert [
+                   icons: [{"arrow_left", _}],
+                   module_name: MyAppWeb.Components.Lucide
+                 ] = ExIcon.prepare_assigns(tmp_dir, opts)
+        end)
+
+      assert output =~ "Skipping broken.svg"
+      assert output =~ "the <script> element is not allowed"
+    end
+
+    test "an icon cannot add code to the generated module", %{
+      tmp_dir: tmp_dir
+    } do
+      opts = [
+        icons: :all,
+        provider: ExIcon.Lucide,
+        version: "1.8.0",
+        module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
+        module_name: MyAppWeb.Components.Lucide
+      ]
+
+      # a body line of """ would close the heredoc of the generated component
+      File.write!(Path.join(tmp_dir, "evil.svg"), """
+      <svg xmlns="http://www.w3.org/2000/svg"><title>
+      \"\"\"
+        end
+
+        def pwned(_assigns) do
+          :erlang.display(:INJECTED)
+          ~H\"\"\"
+      </title></svg>
+      """)
+
+      assigns = ExIcon.prepare_assigns(tmp_dir, opts)
+      source = EEx.eval_file(ExIcon.template_path(), assigns: assigns)
+
+      functions =
+        source
+        |> Code.string_to_quoted!()
+        |> Macro.prewalk([], fn
+          {:def, _meta, [{name, _, _} | _]} = node, acc -> {node, [name | acc]}
+          node, acc -> {node, acc}
+        end)
+        |> elem(1)
+
+      assert functions == [:evil]
+    end
+
     test "raises if two icons map to the same function name", %{
       tmp_dir: tmp_dir
     } do
@@ -280,6 +346,106 @@ defmodule ExIconTest do
 
       assert_raise ArgumentError, ~r/"icon_1password"/, fn ->
         ExIcon.prepare_assigns(tmp_dir, opts)
+      end
+    end
+  end
+
+  describe "verify_module!/1" do
+    @valid """
+    defmodule Generated do
+      @moduledoc "Provides function components for icons."
+      use Phoenix.Component
+
+      attr :stroke, :string, default: "currentColor"
+
+      def arrow_left(assigns) do
+        ~H\"\"\"
+        <svg></svg>
+        \"\"\"
+      end
+    end
+    """
+
+    test "accepts a generated module" do
+      assert ExIcon.verify_module!(@valid) == :ok
+    end
+
+    test "accepts a module with a single expression in its body" do
+      assert ExIcon.verify_module!("""
+             defmodule G do
+               @moduledoc "x"
+             end
+             """) == :ok
+    end
+
+    test "refuses an added function" do
+      contents =
+        String.replace(
+          @valid,
+          "  def arrow_left",
+          "  def pwned(_a), do: :x\n\n  def arrow_left"
+        )
+
+      assert_raise RuntimeError, ~r/does not belong to an icon/, fn ->
+        ExIcon.verify_module!(contents)
+      end
+    end
+
+    test "refuses an added module attribute" do
+      contents =
+        String.replace(
+          @valid,
+          "  use Phoenix.Component",
+          ~s|  use Phoenix.Component\n  @x System.cmd("id", [])|
+        )
+
+      assert_raise RuntimeError, ~r/does not belong to an icon/, fn ->
+        ExIcon.verify_module!(contents)
+      end
+    end
+
+    test "refuses an attribute option that is not a literal" do
+      contents =
+        String.replace(
+          @valid,
+          ~s|default: "currentColor"|,
+          ~s|default: System.get_env("X")|
+        )
+
+      assert_raise RuntimeError, ~r/does not belong to an icon/, fn ->
+        ExIcon.verify_module!(contents)
+      end
+    end
+
+    test "refuses a moduledoc that is not a string" do
+      contents =
+        String.replace(
+          @valid,
+          ~s|@moduledoc "Provides function components for icons."|,
+          "@moduledoc false"
+        )
+
+      assert_raise RuntimeError, ~r/does not belong to an icon/, fn ->
+        ExIcon.verify_module!(contents)
+      end
+    end
+
+    test "refuses a component that is not a heex sigil" do
+      contents =
+        String.replace(
+          @valid,
+          ~r/def arrow_left\(assigns\) do.*?end/s,
+          "def arrow_left(assigns), do: assigns"
+        )
+
+      assert_raise RuntimeError, ~r/does not belong to an icon/, fn ->
+        ExIcon.verify_module!(contents)
+      end
+    end
+
+    test "refuses source that does not parse" do
+      assert_raise RuntimeError, ~r/does not belong to an icon/, fn ->
+        ExIcon.verify_module!("defmodule G do")
       end
     end
   end
@@ -359,12 +525,19 @@ defmodule ExIconTest do
                {~s(<svg aria-hidden="true"></svg>), []}
     end
 
-    test "returns strings without a closing tag unchanged" do
-      assert ExIcon.transform_svg(~s(<svg stroke="currentColor"/>), ["stroke"]) ==
-               {~s(<svg stroke="currentColor"/>), []}
+    test "handles a self-closing root element" do
+      assert ExIcon.transform_svg(
+               ~s(<svg stroke="currentColor"/>),
+               ["stroke"]
+             ) ==
+               {~s(<svg stroke={@stroke} aria-hidden="true"></svg>),
+                [{"stroke", [default: "currentColor"]}]}
+    end
 
-      assert ExIcon.transform_svg("  not an svg  ", ["stroke"]) ==
-               {"not an svg", []}
+    test "raises if the file is not an svg" do
+      assert_raise ArgumentError, ~r/invalid SVG/, fn ->
+        ExIcon.transform_svg("  not an svg  ", ["stroke"])
+      end
     end
 
     test "returns svg without attributes unchanged" do
