@@ -168,6 +168,8 @@ defmodule ExIcon do
                        )
 
   @typedoc """
+  The options that every icon set in `.ex_icon.exs` takes.
+
   #{NimbleOptions.docs(@options_schema)}
   """
   @type options() :: [unquote(NimbleOptions.option_typespec(@options_schema))]

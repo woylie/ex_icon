@@ -61,7 +61,8 @@ ExIcon expects a configuration file named `.ex_icon.exs` in your project root.
 ```
 
 `lucide` is an arbitrary name that is currently only used for CLI output.
-You can configure any number of icon providers.
+You can configure any number of icon providers. See `t:ExIcon.options/0` for
+all available options.
 
 With your configuration in place, you can download the configured releases and
 generate a module with function components for every icon set with:
