@@ -58,6 +58,10 @@
 - Skip icons whose names cannot be turned into function names. Previously, a
   file name in a release was written into the generated module unchecked, where
   it could add arbitrary code.
+- Validate version string before downloading.
+- Set modes of the unpacked files instead of taking them from the archive.
+- Refuse a release archive that unpacks to more than 250 MB.
+- Require an https URL from a provider, unless it points at the local machine.
 - Parse icon files instead of copying their contents into the generated module.
   Previously, an icon file could end the heredoc of a component and add code to
   the module, or add a HEEx expression that was evaluated every time the

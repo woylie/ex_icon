@@ -499,10 +499,9 @@ defmodule ExIcon do
   @doc false
   def download(cache_dir, opts, download_opts \\ []) do
     provider = Keyword.fetch!(opts, :provider)
-    version = Keyword.fetch!(opts, :version)
-    provider_name = provider_name(provider)
+    version = validate_version!(Keyword.fetch!(opts, :version))
 
-    icon_dir = Path.join([cache_dir, provider_name, version])
+    icon_dir = Path.join([cache_dir, cache_key(provider), version])
 
     if Keyword.get(download_opts, :force, false), do: File.rm_rf!(icon_dir)
     if !File.dir?(icon_dir), do: fill_cache!(icon_dir, provider, version)
@@ -615,8 +614,44 @@ defmodule ExIcon do
     end
   end
 
+  # a release is fetched over https, except from the local machine, so that a
+  # provider can be developed against a local server
+  @loopback_hosts ~w(localhost 127.0.0.1 ::1 [::1])
+
+  defp validate_url!(url, provider) do
+    case URI.parse(url) do
+      %URI{scheme: "https"} ->
+        url
+
+      %URI{scheme: "http", host: host} when host in @loopback_hosts ->
+        url
+
+      _uri ->
+        raise ArgumentError, """
+        invalid release URL #{inspect(url)}
+
+        #{inspect(provider)} has to return an https URL, or an http URL of a
+        server on the local machine.
+        """
+    end
+  end
+
+  # an archive decides the modes of the files it is unpacked into, and the cache
+  # is shared between projects and users on the machine
+  defp normalize_modes!(dir) do
+    for path <- Path.wildcard(Path.join(dir, "**"), match_dot: true) do
+      File.chmod!(path, if(File.dir?(path), do: 0o755, else: 0o644))
+    end
+
+    File.chmod!(dir, 0o755)
+  end
+
   defp download_icons!(provider, version) do
-    url = version |> provider.release_url() |> String.to_charlist()
+    url =
+      version
+      |> provider.release_url()
+      |> validate_url!(provider)
+      |> String.to_charlist()
 
     http_opts = [
       connect_timeout: :timer.seconds(30),
@@ -648,11 +683,17 @@ defmodule ExIcon do
     end
   end
 
+  @max_release_size 250 * 1024 * 1024
+
   @doc false
-  def unpack_archive!(zip, path) do
+  def unpack_archive!(zip, path, opts \\ []) do
+    max_size = Keyword.get(opts, :max_size, @max_release_size)
+    check_declared_size!(zip, max_size)
+
     case :zip.extract(zip, [{:cwd, String.to_charlist(path)}]) do
       {:ok, _} ->
-        :ok
+        check_unpacked_size!(path, max_size)
+        normalize_modes!(path)
 
       result ->
         raise """
@@ -661,6 +702,42 @@ defmodule ExIcon do
         #{inspect(result, pretty: true)}
         """
     end
+  end
+
+  defp check_declared_size!(zip, max_size) do
+    case :zip.list_dir(zip) do
+      {:ok, entries} ->
+        entries
+        |> Enum.reduce(0, fn
+          {:zip_file, _name, info, _comment, _offset, _size}, total ->
+            total + elem(info, 1)
+
+          _entry, total ->
+            total
+        end)
+        |> refuse_above!(max_size)
+
+      _result ->
+        :ok
+    end
+  end
+
+  defp check_unpacked_size!(path, max_size) do
+    path
+    |> Path.join("**")
+    |> Path.wildcard(match_dot: true)
+    |> Enum.reduce(0, fn entry, total -> total + File.stat!(entry).size end)
+    |> refuse_above!(max_size)
+  end
+
+  defp refuse_above!(total, max_size) when total <= max_size, do: :ok
+
+  defp refuse_above!(_total, max_size) do
+    raise """
+    Refusing to unpack zip archive
+
+    The archive unpacks to more than #{div(max_size, 1024 * 1024)} MB.
+    """
   end
 
   @doc false
@@ -687,6 +764,26 @@ defmodule ExIcon do
     |> Module.split()
     |> List.last()
     |> Macro.underscore()
+  end
+
+  defp cache_key(module) do
+    module |> Module.split() |> Enum.map_join("_", &Macro.underscore/1)
+  end
+
+  # the version ends up in the release URL and in the cache path
+  @version_regex ~r/^[A-Za-z0-9][A-Za-z0-9._-]*$/
+
+  defp validate_version!(version) do
+    if Regex.match?(@version_regex, version) do
+      version
+    else
+      raise ArgumentError, """
+      invalid version #{inspect(version)}
+
+      A version may only contain letters, digits, dots, hyphens and
+      underscores, and has to start with a letter or a digit.
+      """
+    end
   end
 
   # converts HTML attributes and icon names to snake case; ignores casing

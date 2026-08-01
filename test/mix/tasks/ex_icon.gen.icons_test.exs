@@ -21,7 +21,14 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
 
   setup %{tmp_dir: tmp_dir} do
     cache_dir = cache_dir(tmp_dir)
-    svg_dir = Path.join([cache_dir, "test_provider", "1.0.0", "icons"])
+
+    svg_dir =
+      Path.join([
+        cache_dir,
+        "mix_tasks_ex_icon_gen_icons_test_test_provider",
+        "1.0.0",
+        "icons"
+      ])
 
     File.mkdir_p!(Path.join(svg_dir, "nested"))
     File.write!(Path.join(svg_dir, "arrow-left.svg"), svg())
@@ -203,6 +210,13 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
     write_config(tmp_dir, icons: icon_set(tmp_dir))
 
     assert run(tmp_dir) =~ "* writing"
-    assert File.dir?(Path.join([cache_dir, "test_provider", "1.0.0"]))
+
+    assert File.dir?(
+             Path.join([
+               cache_dir,
+               "mix_tasks_ex_icon_gen_icons_test_test_provider",
+               "1.0.0"
+             ])
+           )
   end
 end

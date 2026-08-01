@@ -994,12 +994,16 @@ defmodule ExIconTest do
       {icon_dir, output} = with_io(fn -> ExIcon.download(cache_dir, opts) end)
 
       assert output =~ "Downloading local_provider 1.0.0..."
-      assert icon_dir == Path.join([cache_dir, "local_provider", "1.0.0"])
+
+      assert icon_dir ==
+               Path.join([cache_dir, "ex_icon_test_local_provider", "1.0.0"])
 
       assert File.read!(Path.join([icon_dir, "icons", "arrow-left.svg"])) ==
                "<svg></svg>"
 
-      assert File.ls!(Path.join(cache_dir, "local_provider")) == ["1.0.0"]
+      assert File.ls!(Path.join(cache_dir, "ex_icon_test_local_provider")) == [
+               "1.0.0"
+             ]
     end
 
     test "reuses the cached release on the next call", %{
@@ -1008,7 +1012,9 @@ defmodule ExIconTest do
     } do
       capture_io(fn -> ExIcon.download(cache_dir, opts) end)
 
-      marker = Path.join([cache_dir, "local_provider", "1.0.0", "marker"])
+      marker =
+        Path.join([cache_dir, "ex_icon_test_local_provider", "1.0.0", "marker"])
+
       File.write!(marker, "kept")
 
       assert capture_io(fn -> ExIcon.download(cache_dir, opts) end) == ""
@@ -1021,7 +1027,9 @@ defmodule ExIconTest do
     } do
       capture_io(fn -> ExIcon.download(cache_dir, opts) end)
 
-      marker = Path.join([cache_dir, "local_provider", "1.0.0", "marker"])
+      marker =
+        Path.join([cache_dir, "ex_icon_test_local_provider", "1.0.0", "marker"])
+
       File.write!(marker, "discarded")
 
       assert capture_io(fn ->
@@ -1031,7 +1039,12 @@ defmodule ExIconTest do
       refute File.exists?(marker)
 
       assert File.exists?(
-               Path.join([cache_dir, "local_provider", "1.0.0", "icons"])
+               Path.join([
+                 cache_dir,
+                 "ex_icon_test_local_provider",
+                 "1.0.0",
+                 "icons"
+               ])
              )
     end
 
@@ -1039,7 +1052,7 @@ defmodule ExIconTest do
       cache_dir: cache_dir,
       opts: opts
     } do
-      icon_dir = Path.join([cache_dir, "local_provider", "1.0.0"])
+      icon_dir = Path.join([cache_dir, "ex_icon_test_local_provider", "1.0.0"])
       File.mkdir_p!(Path.dirname(icon_dir))
       File.write!(icon_dir, "not a folder")
 
@@ -1080,7 +1093,7 @@ defmodule ExIconTest do
         module_name: MyAppWeb.Components.Lucide
       ]
 
-      icon_dir = Path.join([tmp_dir, "lucide", "1.8.0"])
+      icon_dir = Path.join([tmp_dir, "ex_icon_lucide", "1.8.0"])
       svg_dir = Path.join(icon_dir, "icons")
       File.mkdir_p!(svg_dir)
       File.write!(Path.join(svg_dir, "cached.svg"), "<svg></svg>")
@@ -1098,7 +1111,9 @@ defmodule ExIconTest do
         module_name: MyAppWeb.Components.Icons
       ]
 
-      icon_dir = Path.join([tmp_dir, "unreachable_provider", "1.0.0"])
+      icon_dir =
+        Path.join([tmp_dir, "ex_icon_test_unreachable_provider", "1.0.0"])
+
       svg_dir = Path.join(icon_dir, "icons")
       File.mkdir_p!(svg_dir)
 
@@ -1130,8 +1145,61 @@ defmodule ExIconTest do
         end
       end)
 
-      refute File.dir?(Path.join([tmp_dir, "unreachable_provider", "1.0.0"]))
-      assert File.ls!(Path.join(tmp_dir, "unreachable_provider")) == []
+      refute File.dir?(
+               Path.join([
+                 tmp_dir,
+                 "ex_icon_test_unreachable_provider",
+                 "1.0.0"
+               ])
+             )
+
+      assert File.ls!(Path.join(tmp_dir, "ex_icon_test_unreachable_provider")) ==
+               []
+    end
+  end
+
+  describe "download/3 validation" do
+    @describetag :tmp_dir
+
+    defmodule PlainHttpProvider do
+      @behaviour ExIcon.Provider
+      @impl true
+      def release_url(_), do: "http://example.com/icons.zip"
+      @impl true
+      def svg_folder(_), do: "icons"
+    end
+
+    test "raises for a version that is not a plain version", %{
+      tmp_dir: tmp_dir
+    } do
+      for version <- ["../../etc", "1.0.0/../..", ".."] do
+        opts = [provider: UnreachableProvider, version: version]
+
+        assert_raise ArgumentError, ~r/invalid version/, fn ->
+          ExIcon.download(tmp_dir, opts)
+        end
+      end
+    end
+
+    test "raises for a release URL that is not https", %{tmp_dir: tmp_dir} do
+      opts = [provider: PlainHttpProvider, version: "1.0.0"]
+
+      assert_raise ArgumentError, ~r/invalid release URL/, fn ->
+        ExIcon.download(tmp_dir, opts)
+      end
+    end
+
+    test "keeps providers apart that share the last name segment", %{
+      tmp_dir: tmp_dir
+    } do
+      assert_raise RuntimeError, fn ->
+        ExIcon.download(tmp_dir,
+          provider: UnreachableProvider,
+          version: "1.0.0"
+        )
+      end
+
+      assert File.ls!(tmp_dir) == ["ex_icon_test_unreachable_provider"]
     end
   end
 
@@ -1166,6 +1234,56 @@ defmodule ExIconTest do
       assert_raise RuntimeError, ~r/Unable to unpack zip archive/, fn ->
         ExIcon.unpack_archive!(zip, target)
       end
+    end
+
+    test "refuses an archive that declares more than the size cap", %{
+      tmp_dir: tmp_dir
+    } do
+      zip = build_zip([{~c"icons/big.svg", String.duplicate("A", 5000)}])
+      target = Path.join(tmp_dir, "target")
+      File.mkdir_p!(target)
+
+      assert_raise RuntimeError, ~r/unpacks to more than/, fn ->
+        ExIcon.unpack_archive!(zip, target, max_size: 1024)
+      end
+
+      assert File.ls!(target) == []
+    end
+
+    test "refuses an archive that unpacks to more than the size cap", %{
+      tmp_dir: tmp_dir
+    } do
+      zip = build_zip_with_understated_size()
+      target = Path.join(tmp_dir, "target")
+      File.mkdir_p!(target)
+
+      assert_raise RuntimeError, ~r/unpacks to more than/, fn ->
+        ExIcon.unpack_archive!(zip, target, max_size: 1024)
+      end
+    end
+
+    test "normalizes the modes of the unpacked files", %{tmp_dir: tmp_dir} do
+      source = Path.join(tmp_dir, "source")
+      File.mkdir_p!(Path.join(source, "icons"))
+      icon = Path.join([source, "icons", "arrow-left.svg"])
+      File.write!(icon, "<svg></svg>")
+      File.chmod!(icon, 0o777)
+
+      zip_path = Path.join(tmp_dir, "modes.zip")
+
+      {:ok, _} =
+        :zip.create(String.to_charlist(zip_path), [~c"icons"],
+          cwd: String.to_charlist(source)
+        )
+
+      target = Path.join(tmp_dir, "target")
+      File.mkdir_p!(target)
+
+      assert ExIcon.unpack_archive!(File.read!(zip_path), target) == :ok
+
+      unpacked = Path.join([target, "icons", "arrow-left.svg"])
+      assert File.stat!(unpacked).mode == 0o100644
+      assert File.stat!(Path.join(target, "icons")).mode == 0o40755
     end
 
     @tag :capture_log
@@ -1484,6 +1602,16 @@ defmodule ExIconTest do
   defp build_zip(entries) do
     {:ok, {_name, zip}} = :zip.create(~c"icons.zip", entries, [:memory])
     zip
+  end
+
+  defp build_zip_with_understated_size do
+    zip = build_zip([{~c"icons/big.svg", String.duplicate("A", 5000)}])
+    {position, _length} = :binary.match(zip, <<0x50, 0x4B, 0x01, 0x02>>)
+    offset = position + 24
+
+    binary_part(zip, 0, offset) <>
+      <<100::little-32>> <>
+      binary_part(zip, offset + 4, byte_size(zip) - offset - 4)
   end
 
   defp build_zip_with_absolute_entry do
