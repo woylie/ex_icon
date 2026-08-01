@@ -312,8 +312,23 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
                  {:shutdown, 1}
       end)
 
-    assert output =~ "An error occurred."
-    assert output =~ ":enoent"
+    assert output =~ "Could not read #{config_path(tmp_dir)}."
+    assert output =~ "no such file or directory"
+  end
+
+  test "exits if the configuration file is not valid", %{tmp_dir: tmp_dir} do
+    write_config(tmp_dir,
+      icons: icon_set(tmp_dir, attrs: [{"stroke", default: "a", fixed: "b"}])
+    )
+
+    output =
+      capture_io(fn ->
+        assert catch_exit(Mix.Task.rerun("ex_icon.gen.icons", args(tmp_dir))) ==
+                 {:shutdown, 1}
+      end)
+
+    assert output =~ "#{config_path(tmp_dir)} is not valid."
+    assert output =~ "sets both :default and :fixed"
   end
 
   test "caches releases in the given folder", %{

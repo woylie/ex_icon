@@ -68,8 +68,9 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
   @impl Mix.Task
   def run(args) do
     {opts, []} = OptionParser.parse!(args, @switches)
+    config_path = opts[:config] || @default_config_path
 
-    case ExIcon.read_config(opts[:config] || @default_config_path) do
+    case ExIcon.read_config(config_path) do
       {:ok, config} ->
         cache_dir =
           opts[:cache_dir] || Path.join(Mix.Utils.mix_cache(), @cache_dir)
@@ -93,14 +94,25 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
         if :skipped in results, do: exit({:shutdown, 1})
 
       {:error, reason} ->
-        IO.puts("""
-        An error occurred.
-
-        #{inspect(reason, pretty: true)}
-        """)
-
+        IO.puts(config_error(config_path, reason))
         exit({:shutdown, 1})
     end
+  end
+
+  defp config_error(path, %{__exception__: true} = error) do
+    """
+    #{path} is not valid.
+
+    #{Exception.message(error)}
+    """
+  end
+
+  defp config_error(path, posix) do
+    """
+    Could not read #{path}.
+
+    #{:file.format_error(posix)}
+    """
   end
 
   defp select_icon_sets(icon_sets, nil), do: icon_sets
