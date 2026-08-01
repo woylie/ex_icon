@@ -1135,6 +1135,22 @@ defmodule ExIconTest do
     end
   end
 
+  describe "download/3 validation" do
+    @describetag :tmp_dir
+
+    test "raises for a version that is not a plain version", %{
+      tmp_dir: tmp_dir
+    } do
+      for version <- ["../../etc", "1.0.0/../..", ".."] do
+        opts = [provider: UnreachableProvider, version: version]
+
+        assert_raise ArgumentError, ~r/invalid version/, fn ->
+          ExIcon.download(tmp_dir, opts)
+        end
+      end
+    end
+  end
+
   describe "unpack_archive!/2" do
     @describetag :tmp_dir
 

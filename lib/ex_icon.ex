@@ -499,7 +499,7 @@ defmodule ExIcon do
   @doc false
   def download(cache_dir, opts, download_opts \\ []) do
     provider = Keyword.fetch!(opts, :provider)
-    version = Keyword.fetch!(opts, :version)
+    version = validate_version!(Keyword.fetch!(opts, :version))
     provider_name = provider_name(provider)
 
     icon_dir = Path.join([cache_dir, provider_name, version])
@@ -687,6 +687,22 @@ defmodule ExIcon do
     |> Module.split()
     |> List.last()
     |> Macro.underscore()
+  end
+
+  # the version ends up in the release URL and in the cache path
+  @version_regex ~r/^[A-Za-z0-9][A-Za-z0-9._-]*$/
+
+  defp validate_version!(version) do
+    if Regex.match?(@version_regex, version) do
+      version
+    else
+      raise ArgumentError, """
+      invalid version #{inspect(version)}
+
+      A version may only contain letters, digits, dots, hyphens and
+      underscores, and has to start with a letter or a digit.
+      """
+    end
   end
 
   # converts HTML attributes and icon names to snake case; ignores casing
