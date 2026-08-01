@@ -85,6 +85,31 @@ defmodule ExIcon do
       Not supported if `path` is set.
       """
     ],
+    global_attrs: [
+      type:
+        {:or,
+         [
+           :boolean,
+           keyword_list: [
+             default: [type: {:map, :string, :string}],
+             include: [type: {:list, :string}]
+           ]
+         ]},
+      required: false,
+      default: false,
+      doc: """
+      Adds an `attr :rest, :global` to the generated components, so that they
+      accept the global HTML attributes, such as `id`, `class`, `phx-click` and
+      `data-*`.
+
+      Set to `true`, or to a keyword list with the `default` and `include`
+      options of `attr`. Example:
+      `[default: %{"class" => "size-6"}, include: ["fill"]]`.
+
+      The attributes that are passed to a component are written before the ones
+      of the SVG file, so that they take precedence.
+      """
+    ],
     attrs: [
       type: {:custom, __MODULE__, :validate_attrs, []},
       type_doc: "list of `t:String.t/0` or `{t:String.t/0, keyword}`",
@@ -163,15 +188,34 @@ defmodule ExIcon do
     end
   end
 
-  defp transform_parsed({svg_attrs, inner}, attrs) do
+  defp transform_parsed({svg_attrs, inner}, attrs, global_attrs \\ false) do
     merged = merge_attrs(svg_attrs, normalize_attrs(attrs))
-    rendered = Enum.map_join(merged, " ", &render_attr/1)
+
+    # HTML keeps the first of two attributes with the same name, so the ones
+    # passed to the component are written before the ones of the SVG file
+    rendered =
+      merged
+      |> with_global_attrs(global_attrs)
+      |> Enum.map_join(" ", &render_attr/1)
 
     component_attrs =
       for {:component, name, value, opts} <- merged,
           do: {to_snake_case(name), attr_options(name, value, opts)}
 
     {~s(<svg #{rendered}>#{inner}</svg>), component_attrs}
+  end
+
+  defp with_global_attrs(merged, false), do: merged
+  defp with_global_attrs(merged, _global_attrs), do: [:global | merged]
+
+  @doc false
+  def render_global_attr(false), do: ""
+
+  def render_global_attr(opts) when opts in [true, []],
+    do: "\n  attr :rest, :global"
+
+  def render_global_attr(opts) when is_list(opts) do
+    "\n  attr :rest, :global, " <> render_attr_options(opts)
   end
 
   defp normalize_attrs(attrs) do
@@ -267,6 +311,8 @@ defmodule ExIcon do
       true -> :none
     end
   end
+
+  defp render_attr(:global), do: "{@rest}"
 
   defp render_attr({:component, name, _value, _values}) do
     "#{name}={@#{to_snake_case(name)}}"
@@ -410,6 +456,7 @@ defmodule ExIcon do
   def prepare_assigns(path, opts) do
     module_name = Keyword.fetch!(opts, :module_name)
     attrs = Keyword.get(opts, :attrs, [])
+    global_attrs = Keyword.get(opts, :global_attrs, false)
 
     exclude = MapSet.new(Keyword.get(opts, :exclude, []))
 
@@ -429,7 +476,7 @@ defmodule ExIcon do
         with {:ok, function_name} <- function_name(icon_name),
              svg when is_binary(svg) <- read_icon(path, icon_name),
              {:ok, parsed} <- parse_icon(icon_name, svg) do
-          {function_name, transform_parsed(parsed, attrs)}
+          {function_name, transform_parsed(parsed, attrs, global_attrs)}
         else
           _ -> nil
         end
@@ -439,7 +486,7 @@ defmodule ExIcon do
 
     if configured != :all, do: ensure_nothing_missing!(wanted, icons)
 
-    [icons: icons, module_name: module_name]
+    [icons: icons, module_name: module_name, global_attrs: global_attrs]
   end
 
   # raise if icon listed in the configuration is missing
