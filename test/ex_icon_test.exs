@@ -1236,6 +1236,32 @@ defmodule ExIconTest do
       end
     end
 
+    test "refuses an archive that declares more than the size cap", %{
+      tmp_dir: tmp_dir
+    } do
+      zip = build_zip([{~c"icons/big.svg", String.duplicate("A", 5000)}])
+      target = Path.join(tmp_dir, "target")
+      File.mkdir_p!(target)
+
+      assert_raise RuntimeError, ~r/unpacks to more than/, fn ->
+        ExIcon.unpack_archive!(zip, target, max_size: 1024)
+      end
+
+      assert File.ls!(target) == []
+    end
+
+    test "refuses an archive that unpacks to more than the size cap", %{
+      tmp_dir: tmp_dir
+    } do
+      zip = build_zip_with_understated_size()
+      target = Path.join(tmp_dir, "target")
+      File.mkdir_p!(target)
+
+      assert_raise RuntimeError, ~r/unpacks to more than/, fn ->
+        ExIcon.unpack_archive!(zip, target, max_size: 1024)
+      end
+    end
+
     test "normalizes the modes of the unpacked files", %{tmp_dir: tmp_dir} do
       source = Path.join(tmp_dir, "source")
       File.mkdir_p!(Path.join(source, "icons"))
@@ -1576,6 +1602,16 @@ defmodule ExIconTest do
   defp build_zip(entries) do
     {:ok, {_name, zip}} = :zip.create(~c"icons.zip", entries, [:memory])
     zip
+  end
+
+  defp build_zip_with_understated_size do
+    zip = build_zip([{~c"icons/big.svg", String.duplicate("A", 5000)}])
+    {position, _length} = :binary.match(zip, <<0x50, 0x4B, 0x01, 0x02>>)
+    offset = position + 24
+
+    binary_part(zip, 0, offset) <>
+      <<100::little-32>> <>
+      binary_part(zip, offset + 4, byte_size(zip) - offset - 4)
   end
 
   defp build_zip_with_absolute_entry do

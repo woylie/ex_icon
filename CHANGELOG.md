@@ -60,6 +60,7 @@
   it could add arbitrary code.
 - Validate version string before downloading.
 - Set modes of the unpacked files instead of taking them from the archive.
+- Refuse a release archive that unpacks to more than 250 MB.
 - Require an https URL from a provider, unless it points at the local machine.
 - Parse icon files instead of copying their contents into the generated module.
   Previously, an icon file could end the heredoc of a component and add code to

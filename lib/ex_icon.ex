@@ -683,10 +683,16 @@ defmodule ExIcon do
     end
   end
 
+  @max_release_size 250 * 1024 * 1024
+
   @doc false
-  def unpack_archive!(zip, path) do
+  def unpack_archive!(zip, path, opts \\ []) do
+    max_size = Keyword.get(opts, :max_size, @max_release_size)
+    check_declared_size!(zip, max_size)
+
     case :zip.extract(zip, [{:cwd, String.to_charlist(path)}]) do
       {:ok, _} ->
+        check_unpacked_size!(path, max_size)
         normalize_modes!(path)
 
       result ->
@@ -696,6 +702,42 @@ defmodule ExIcon do
         #{inspect(result, pretty: true)}
         """
     end
+  end
+
+  defp check_declared_size!(zip, max_size) do
+    case :zip.list_dir(zip) do
+      {:ok, entries} ->
+        entries
+        |> Enum.reduce(0, fn
+          {:zip_file, _name, info, _comment, _offset, _size}, total ->
+            total + elem(info, 1)
+
+          _entry, total ->
+            total
+        end)
+        |> refuse_above!(max_size)
+
+      _result ->
+        :ok
+    end
+  end
+
+  defp check_unpacked_size!(path, max_size) do
+    path
+    |> Path.join("**")
+    |> Path.wildcard(match_dot: true)
+    |> Enum.reduce(0, fn entry, total -> total + File.stat!(entry).size end)
+    |> refuse_above!(max_size)
+  end
+
+  defp refuse_above!(total, max_size) when total <= max_size, do: :ok
+
+  defp refuse_above!(_total, max_size) do
+    raise """
+    Refusing to unpack zip archive
+
+    The archive unpacks to more than #{div(max_size, 1024 * 1024)} MB.
+    """
   end
 
   @doc false
