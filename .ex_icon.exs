@@ -57,6 +57,14 @@
       version: "1.8.0",
       module_path: "output/lucide_all.ex",
       module_name: MyAppWeb.Components.LucideAll
+    ],
+    custom: [
+      # icon set read from a folder instead of a downloaded release
+      path: "dev/icons",
+      icons: :all,
+      module_path: "output/custom.ex",
+      module_name: MyAppWeb.Components.Custom,
+      global_attrs: false
     ]
   ]
 ]
