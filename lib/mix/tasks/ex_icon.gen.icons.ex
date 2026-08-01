@@ -75,8 +75,10 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
         refresh = opts[:refresh] == true
         force = opts[:force] == true
 
+        icon_sets = Keyword.fetch!(config, :icon_sets)
+
         results =
-          do_run(config, cache_dir, opts[:icon_set], refresh, force: force)
+          do_run(icon_sets, cache_dir, opts[:icon_set], refresh, force: force)
 
         IO.puts("""
         Done.

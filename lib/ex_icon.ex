@@ -112,7 +112,14 @@ defmodule ExIcon do
   ]
 
   @config_schema NimbleOptions.new!(
-                   *: [type: :keyword_list, keys: @options_schema]
+                   icon_sets: [
+                     type: :keyword_list,
+                     required: true,
+                     keys: [*: [type: :keyword_list, keys: @options_schema]],
+                     doc: """
+                     The icon sets to generate, keyed by a name of your choice.
+                     """
+                   ]
                  )
 
   @attr_options_schema NimbleOptions.new!(

@@ -44,9 +44,9 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
   defp cache_dir(tmp_dir), do: Path.join(tmp_dir, "cache")
   defp config_path(tmp_dir), do: Path.join(tmp_dir, "icons.exs")
 
-  defp write_config(tmp_dir, config) do
+  defp write_config(tmp_dir, icon_sets) do
     path = config_path(tmp_dir)
-    File.write!(path, inspect(config))
+    File.write!(path, inspect(icon_sets: icon_sets))
     path
   end
 
