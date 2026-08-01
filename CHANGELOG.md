@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [0.4.0] - 2026-08-01
+
 ### Added
 
 - Add `default`, `values`, `required`, and `fixed` options to attribute
