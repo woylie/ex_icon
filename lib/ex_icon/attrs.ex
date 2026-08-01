@@ -4,22 +4,13 @@ defmodule ExIcon.Attrs do
   # Merges the attributes of an SVG file with the ones from the `attrs` and
   # `global_attrs` options, and renders them into the tag of a component.
 
-  @spec transform_svg(svg, attrs) :: {svg, component_attrs}
-        when svg: binary,
+  @spec transform_parsed(parsed, attrs, global_attrs) :: {svg, component_attrs}
+        when parsed: {[{binary, binary}], binary},
              attrs: [binary | {binary, keyword}],
+             global_attrs: boolean | keyword,
+             svg: binary,
              component_attrs: [{binary, keyword}]
-  def transform_svg(svg, attrs \\ [])
-      when is_binary(svg) and is_list(attrs) do
-    case ExIcon.SVG.parse(svg) do
-      {:ok, parsed} ->
-        transform_parsed(parsed, attrs)
-
-      {:error, reason} ->
-        raise ArgumentError, "invalid SVG: #{reason}"
-    end
-  end
-
-  def transform_parsed({svg_attrs, inner}, attrs, global_attrs \\ false) do
+  def transform_parsed({svg_attrs, inner}, attrs, global_attrs) do
     merged = merge_attrs(svg_attrs, normalize_attrs(attrs))
 
     # HTML keeps the first of two attributes with the same name, so the ones

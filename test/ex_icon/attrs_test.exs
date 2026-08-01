@@ -26,7 +26,7 @@ defmodule ExIcon.AttrsTest do
         {"fill", fixed: "none"}
       ]
 
-      {transformed, component_attrs} = ExIcon.Attrs.transform_svg(svg, attrs)
+      {transformed, component_attrs} = transform_svg(svg, attrs)
 
       declarations =
         Enum.map_join(component_attrs, "\n", fn {name, opts} ->
@@ -68,27 +68,21 @@ defmodule ExIcon.AttrsTest do
     end
   end
 
-  describe "transform_svg/2" do
+  describe "transform_parsed/3" do
     test "adds aria-hidden to empty svg" do
       svg = "<svg></svg>"
 
-      assert ExIcon.Attrs.transform_svg(svg) ==
+      assert transform_svg(svg) ==
                {~s(<svg aria-hidden="true"></svg>), []}
     end
 
     test "handles a self-closing root element" do
-      assert ExIcon.Attrs.transform_svg(
+      assert transform_svg(
                ~s(<svg stroke="currentColor"/>),
                ["stroke"]
              ) ==
                {~s(<svg stroke={@stroke} aria-hidden="true"></svg>),
                 [{"stroke", [default: "currentColor"]}]}
-    end
-
-    test "raises if the file is not an svg" do
-      assert_raise ArgumentError, ~r/invalid SVG/, fn ->
-        ExIcon.Attrs.transform_svg("  not an svg  ", ["stroke"])
-      end
     end
 
     test "returns svg without attributes unchanged" do
@@ -99,7 +93,7 @@ defmodule ExIcon.AttrsTest do
       </svg>
       """
 
-      assert ExIcon.Attrs.transform_svg(svg) ==
+      assert transform_svg(svg) ==
                {"""
                 <svg aria-hidden="true">
                   <path d="m12 19-7-7 7-7" />
@@ -116,7 +110,7 @@ defmodule ExIcon.AttrsTest do
       </svg>
       """
 
-      assert ExIcon.Attrs.transform_svg(svg) == {String.trim(svg), []}
+      assert transform_svg(svg) == {String.trim(svg), []}
     end
 
     test "transforms svg without inner content and extra attributes unchanged" do
@@ -125,7 +119,7 @@ defmodule ExIcon.AttrsTest do
       </svg>
       """
 
-      assert ExIcon.Attrs.transform_svg(svg) ==
+      assert transform_svg(svg) ==
                {"""
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
                 </svg>\
@@ -140,7 +134,7 @@ defmodule ExIcon.AttrsTest do
       </svg>
       """
 
-      assert ExIcon.Attrs.transform_svg(svg, ["stroke", "stroke-width"]) ==
+      assert transform_svg(svg, ["stroke", "stroke-width"]) ==
                {"""
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke={@stroke} stroke-width={@stroke_width} aria-hidden="true">
                   <path d="m12 19-7-7 7-7" />
@@ -154,7 +148,7 @@ defmodule ExIcon.AttrsTest do
     end
 
     test "replaces attributes with HEEx variables (with line breaks)" do
-      assert ExIcon.Attrs.transform_svg(
+      assert transform_svg(
                """
                <svg
                  xmlns="http://www.w3.org/2000/svg"
@@ -190,7 +184,7 @@ defmodule ExIcon.AttrsTest do
       </svg>
       """
 
-      assert ExIcon.Attrs.transform_svg(svg, ["stroke"]) ==
+      assert transform_svg(svg, ["stroke"]) ==
                {"""
                 <svg xmlNS="http://www.w3.org/2000/svg" WIDTH="24" heiGHt="24" viewbox="0 0 24 24" Stroke={@stroke} Stroke-Width="2" aria-hidden="true">
                   <path d="m12 19-7-7 7-7" />
@@ -202,7 +196,7 @@ defmodule ExIcon.AttrsTest do
     test "overrides the default value of a component attribute" do
       svg = ~s(<svg stroke="currentColor" stroke-width="2"></svg>)
 
-      assert ExIcon.Attrs.transform_svg(svg, [
+      assert transform_svg(svg, [
                "stroke",
                {"stroke-width", default: "1.5"}
              ]) ==
@@ -216,14 +210,14 @@ defmodule ExIcon.AttrsTest do
     test "overrides an attribute value without adding a component attribute" do
       svg = ~s(<svg stroke="currentColor"></svg>)
 
-      assert ExIcon.Attrs.transform_svg(svg, [{"stroke", fixed: "red"}]) ==
+      assert transform_svg(svg, [{"stroke", fixed: "red"}]) ==
                {~s(<svg stroke="red" aria-hidden="true"></svg>), []}
     end
 
     test "adds attributes that the svg does not have" do
       svg = ~s(<svg stroke="currentColor"></svg>)
 
-      assert ExIcon.Attrs.transform_svg(svg, [
+      assert transform_svg(svg, [
                {"fill", fixed: "none"},
                {"class", default: "size-6"}
              ]) ==
@@ -234,7 +228,7 @@ defmodule ExIcon.AttrsTest do
     test "adds attributes to an svg without attributes" do
       svg = ~s(<svg><path d="M19 12H5" /></svg>)
 
-      assert ExIcon.Attrs.transform_svg(svg, [{"class", default: "size-6"}]) ==
+      assert transform_svg(svg, [{"class", default: "size-6"}]) ==
                {~s(<svg class={@class} aria-hidden="true"><path d="M19 12H5" /></svg>),
                 [{"class", [default: "size-6"]}]}
     end
@@ -242,28 +236,28 @@ defmodule ExIcon.AttrsTest do
     test "ignores attribute names that the svg does not have" do
       svg = ~s(<svg stroke="currentColor"></svg>)
 
-      assert ExIcon.Attrs.transform_svg(svg, ["class"]) ==
+      assert transform_svg(svg, ["class"]) ==
                {~s(<svg stroke="currentColor" aria-hidden="true"></svg>), []}
     end
 
     test "overrides attributes case-insensitively" do
       svg = ~s(<svg Stroke-Width="2"></svg>)
 
-      assert ExIcon.Attrs.transform_svg(svg, [{"stroke-width", fixed: "1.5"}]) ==
+      assert transform_svg(svg, [{"stroke-width", fixed: "1.5"}]) ==
                {~s(<svg Stroke-Width="1.5" aria-hidden="true"></svg>), []}
     end
 
     test "keeps aria-hidden set by the svg" do
       svg = ~s(<svg aria-hidden="false"></svg>)
 
-      assert ExIcon.Attrs.transform_svg(svg) ==
+      assert transform_svg(svg) ==
                {~s(<svg aria-hidden="false"></svg>), []}
     end
 
     test "restricts a component attribute to the given values" do
       svg = ~s(<svg stroke-linecap="round"></svg>)
 
-      assert ExIcon.Attrs.transform_svg(svg, [
+      assert transform_svg(svg, [
                {"stroke-linecap", values: ["square", "round"]}
              ]) ==
                {~s(<svg stroke-linecap={@stroke_linecap} aria-hidden="true"></svg>),
@@ -276,7 +270,7 @@ defmodule ExIcon.AttrsTest do
     test "combines values with an explicit default" do
       svg = ~s(<svg stroke-linecap="round"></svg>)
 
-      assert ExIcon.Attrs.transform_svg(svg, [
+      assert transform_svg(svg, [
                {"stroke-linecap",
                 values: ["square", "round"], default: "square"}
              ]) ==
@@ -290,7 +284,7 @@ defmodule ExIcon.AttrsTest do
     test "adds an optional attribute with a nil default" do
       svg = ~s(<svg stroke="currentColor"></svg>)
 
-      assert ExIcon.Attrs.transform_svg(svg, [{"class", default: nil}]) ==
+      assert transform_svg(svg, [{"class", default: nil}]) ==
                {~s(<svg stroke="currentColor" class={@class} aria-hidden="true"></svg>),
                 [{"class", [default: nil]}]}
     end
@@ -298,13 +292,13 @@ defmodule ExIcon.AttrsTest do
     test "a nil default overrides the value of the svg" do
       svg = ~s(<svg stroke="currentColor"></svg>)
 
-      assert ExIcon.Attrs.transform_svg(svg, [{"stroke", default: nil}]) ==
+      assert transform_svg(svg, [{"stroke", default: nil}]) ==
                {~s(<svg stroke={@stroke} aria-hidden="true"></svg>),
                 [{"stroke", [default: nil]}]}
     end
 
     test "allows nil as one of the values" do
-      assert ExIcon.Attrs.transform_svg(~s(<svg stroke-width="2"></svg>), [
+      assert transform_svg(~s(<svg stroke-width="2"></svg>), [
                {"stroke-width", values: ["2", "4", nil], default: nil}
              ]) ==
                {~s(<svg stroke-width={@stroke_width} aria-hidden="true"></svg>),
@@ -314,7 +308,7 @@ defmodule ExIcon.AttrsTest do
     test "adds a required attribute" do
       svg = ~s(<svg stroke="currentColor"></svg>)
 
-      assert ExIcon.Attrs.transform_svg(svg, [{"stroke-width", required: true}]) ==
+      assert transform_svg(svg, [{"stroke-width", required: true}]) ==
                {~s(<svg stroke="currentColor" stroke-width={@stroke_width} aria-hidden="true"></svg>),
                 [{"stroke_width", [required: true]}]}
     end
@@ -322,13 +316,13 @@ defmodule ExIcon.AttrsTest do
     test "a required attribute has no default, not even from the svg" do
       svg = ~s(<svg stroke="currentColor"></svg>)
 
-      assert ExIcon.Attrs.transform_svg(svg, [{"stroke", required: true}]) ==
+      assert transform_svg(svg, [{"stroke", required: true}]) ==
                {~s(<svg stroke={@stroke} aria-hidden="true"></svg>),
                 [{"stroke", [required: true]}]}
     end
 
     test "combines required with values" do
-      assert ExIcon.Attrs.transform_svg(~s(<svg></svg>), [
+      assert transform_svg(~s(<svg></svg>), [
                {"stroke-linecap", required: true, values: ["square", "round"]}
              ]) ==
                {~s(<svg stroke-linecap={@stroke_linecap} aria-hidden="true"></svg>),
@@ -341,7 +335,7 @@ defmodule ExIcon.AttrsTest do
     test "required: false keeps the default from the svg" do
       svg = ~s(<svg stroke="currentColor"></svg>)
 
-      assert ExIcon.Attrs.transform_svg(svg, [{"stroke", required: false}]) ==
+      assert transform_svg(svg, [{"stroke", required: false}]) ==
                {~s(<svg stroke={@stroke} aria-hidden="true"></svg>),
                 [{"stroke", [default: "currentColor"]}]}
     end
@@ -349,7 +343,7 @@ defmodule ExIcon.AttrsTest do
     test "requires the attribute if values are given without a default" do
       svg = ~s(<svg stroke="currentColor"></svg>)
 
-      assert ExIcon.Attrs.transform_svg(svg, [
+      assert transform_svg(svg, [
                {"stroke-linecap", values: ["square", "round"]}
              ]) ==
                {~s(<svg stroke="currentColor" stroke-linecap={@stroke_linecap} aria-hidden="true"></svg>),
@@ -365,7 +359,7 @@ defmodule ExIcon.AttrsTest do
       assert_raise ArgumentError,
                    ~r/"butt" is not one of \["square", "round"\]/,
                    fn ->
-                     ExIcon.Attrs.transform_svg(svg, [
+                     transform_svg(svg, [
                        {"stroke-linecap", values: ["square", "round"]}
                      ])
                    end
@@ -374,30 +368,30 @@ defmodule ExIcon.AttrsTest do
     test "adds aria-hidden if neither the svg nor the options set it" do
       svg = ~s(<svg stroke="currentColor"></svg>)
 
-      assert ExIcon.Attrs.transform_svg(svg, ["stroke"]) ==
+      assert transform_svg(svg, ["stroke"]) ==
                {~s(<svg stroke={@stroke} aria-hidden="true"></svg>),
                 [{"stroke", [default: "currentColor"]}]}
     end
 
     test "turns aria-hidden into a component attribute defaulting to true" do
-      assert ExIcon.Attrs.transform_svg(~s(<svg></svg>), ["aria-hidden"]) ==
+      assert transform_svg(~s(<svg></svg>), ["aria-hidden"]) ==
                {~s(<svg aria-hidden={@aria_hidden}></svg>),
                 [{"aria_hidden", [default: "true"]}]}
     end
 
     test "keeps the casing of aria-hidden set by the svg" do
-      assert ExIcon.Attrs.transform_svg(~s(<svg ARIA-HIDDEN="false"></svg>)) ==
+      assert transform_svg(~s(<svg ARIA-HIDDEN="false"></svg>)) ==
                {~s(<svg ARIA-HIDDEN="false"></svg>), []}
     end
 
     test "allows setting aria-hidden to a fixed value" do
-      assert ExIcon.Attrs.transform_svg(~s(<svg></svg>), [
+      assert transform_svg(~s(<svg></svg>), [
                {"aria-hidden", fixed: "false"}
              ]) == {~s(<svg aria-hidden="false"></svg>), []}
     end
 
     test "requires aria-hidden if values are given without a default" do
-      assert ExIcon.Attrs.transform_svg(~s(<svg></svg>), [
+      assert transform_svg(~s(<svg></svg>), [
                {"aria-hidden", values: ["true", "false"]}
              ]) ==
                {~s(<svg aria-hidden={@aria_hidden}></svg>),
@@ -407,7 +401,7 @@ defmodule ExIcon.AttrsTest do
     test "allows configuring aria-hidden" do
       svg = ~s(<svg stroke="currentColor"></svg>)
 
-      assert ExIcon.Attrs.transform_svg(svg, [{"aria-hidden", default: "true"}]) ==
+      assert transform_svg(svg, [{"aria-hidden", default: "true"}]) ==
                {~s(<svg stroke="currentColor" aria-hidden={@aria_hidden}></svg>),
                 [{"aria_hidden", [default: "true"]}]}
     end
@@ -430,6 +424,11 @@ defmodule ExIcon.AttrsTest do
              ) ==
                ~s(\n  attr :rest, :global, default: %{"class" => "size-6"}, include: ["fill"])
     end
+  end
+
+  defp transform_svg(svg, attrs \\ []) do
+    {:ok, parsed} = ExIcon.SVG.parse(svg)
+    ExIcon.Attrs.transform_parsed(parsed, attrs, false)
   end
 
   defp render_attr(attr) do
