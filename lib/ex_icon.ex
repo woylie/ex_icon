@@ -2,8 +2,8 @@ defmodule ExIcon do
   @moduledoc """
   Refer to the readme for usage instructions.
 
-  This module only contains helper functions that you probably don't need to
-  use directly.
+  All functions of this module are internal. They are only used by
+  `mix ex_icon.gen.icons`.
   """
 
   @options_schema [

@@ -98,6 +98,19 @@ digit. `1password.svg` becomes `icon_1password`.
 Icons with names that cannot be turned into function names are skipped and
 reported.
 
+## Icon contents
+
+ExIcon only keeps the SVG elements and attributes it knows. If an icon uses
+anything else, such as a `script` element or an `onclick` attribute, ExIcon
+skips the icon and prints the reason.
+
+Attributes that load another document are not allowed. `href` and `xlink:href`
+may only point at an ID in the same file, and a `style` attribute may not
+contain `url()`.
+
+ExIcon removes `metadata` elements and elements with a namespace prefix other
+than `svg`. Such elements are commonly added by editors like Inkscape.
+
 ## Attributes
 
 ExIcon can optionally turn SVG attributes into function component attributes,
