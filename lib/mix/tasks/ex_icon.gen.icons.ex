@@ -151,7 +151,7 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
   end
 
   defp download_and_generate_all(config, cache_dir, refresh?, write_opts) do
-    Enum.each(config, fn {_name, opts} -> ExIcon.targets(opts) end)
+    Enum.each(config, fn {_name, opts} -> ExIcon.Target.targets(opts) end)
 
     config
     |> with_refresh_flags(refresh?)
@@ -180,7 +180,7 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
        ) do
     IO.puts("Processing #{config_name}...")
 
-    targets = ExIcon.targets(opts)
+    targets = ExIcon.Target.targets(opts)
     icon_dir = ExIcon.Source.icon_dir(cache_dir, opts, force: refresh?)
 
     Enum.map(targets, fn {svg_folder, module_name, module_path} ->

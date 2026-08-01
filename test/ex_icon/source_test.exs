@@ -188,7 +188,8 @@ defmodule ExIcon.SourceTest do
       {icon_dir, _output} =
         with_io(fn -> ExIcon.Source.icon_dir(cache_dir, opts) end)
 
-      for {svg_folder, _module_name, _module_path} <- ExIcon.targets(opts) do
+      for {svg_folder, _module_name, _module_path} <-
+            ExIcon.Target.targets(opts) do
         assert File.dir?(Path.join(icon_dir, svg_folder))
       end
     end
