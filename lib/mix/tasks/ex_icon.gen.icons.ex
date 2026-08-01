@@ -205,11 +205,11 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
     {formatter, _opts} = Format.formatter_for_file(module_path)
 
     contents =
-      ExIcon.template_path()
+      ExIcon.Template.template_path()
       |> EEx.eval_file(assigns: assigns)
       |> formatter.()
 
-    ExIcon.verify_module!(contents)
+    ExIcon.Template.verify_module!(contents)
     write_module(module_path, contents, write_opts)
   end
 

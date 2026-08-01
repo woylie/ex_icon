@@ -10,7 +10,7 @@ defmodule <%= inspect(@module_name) %> do
 
   def <%= name %>(assigns) do
     ~H"""
-<%= ExIcon.indent(svg, 4) %>
+<%= ExIcon.Template.indent(svg, 4) %>
     """
   end
 <% end %>end

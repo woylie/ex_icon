@@ -347,7 +347,7 @@ defmodule ExIcon.ComponentsTest do
       """)
 
       assigns = ExIcon.Components.prepare_assigns(tmp_dir, opts)
-      source = EEx.eval_file(ExIcon.template_path(), assigns: assigns)
+      source = EEx.eval_file(ExIcon.Template.template_path(), assigns: assigns)
 
       functions =
         source

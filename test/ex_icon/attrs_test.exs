@@ -439,6 +439,6 @@ defmodule ExIcon.AttrsTest do
       global_attrs: false
     ]
 
-    EEx.eval_file(ExIcon.template_path(), assigns: assigns)
+    EEx.eval_file(ExIcon.Template.template_path(), assigns: assigns)
   end
 end
