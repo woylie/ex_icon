@@ -67,7 +67,8 @@ defmodule ExIconTest do
 
       assert [
                icons: [{name, {transformed_svg, attrs}}],
-               module_name: MyAppWeb.Components.Lucide
+               module_name: MyAppWeb.Components.Lucide,
+               global_attrs: false
              ] = ExIcon.prepare_assigns(tmp_dir, opts)
 
       assert name == "arrow_left"
@@ -116,7 +117,8 @@ defmodule ExIconTest do
 
       assert [
                icons: [{"arrow_left", {_transformed_svg, _attrs}}],
-               module_name: MyAppWeb.Components.Lucide
+               module_name: MyAppWeb.Components.Lucide,
+               global_attrs: false
              ] =
                ExIcon.prepare_assigns(tmp_dir, opts)
     end
@@ -137,7 +139,8 @@ defmodule ExIconTest do
         capture_io(fn ->
           assert [
                    icons: [{"arrow_left", _}],
-                   module_name: MyAppWeb.Components.Lucide
+                   module_name: MyAppWeb.Components.Lucide,
+                   global_attrs: false
                  ] = ExIcon.prepare_assigns(tmp_dir, opts)
         end)
 
@@ -184,7 +187,8 @@ defmodule ExIconTest do
         capture_io(fn ->
           assert [
                    icons: [{"arrow_left", _}],
-                   module_name: MyAppWeb.Components.Lucide
+                   module_name: MyAppWeb.Components.Lucide,
+                   global_attrs: false
                  ] = ExIcon.prepare_assigns(tmp_dir, opts)
         end)
 
@@ -222,7 +226,8 @@ defmodule ExIconTest do
 
       assert ExIcon.prepare_assigns(tmp_dir, opts) == [
                icons: [],
-               module_name: MyAppWeb.Components.Lucide
+               module_name: MyAppWeb.Components.Lucide,
+               global_attrs: false
              ]
     end
 
@@ -239,7 +244,8 @@ defmodule ExIconTest do
 
       assert [
                icons: [{"icon_1password", _}],
-               module_name: MyAppWeb.Components.SimpleIcons
+               module_name: MyAppWeb.Components.SimpleIcons,
+               global_attrs: false
              ] = ExIcon.prepare_assigns(tmp_dir, opts)
     end
 
@@ -262,11 +268,38 @@ defmodule ExIconTest do
         capture_io(fn ->
           assert [
                    icons: [{"arrow_left", _}],
-                   module_name: MyAppWeb.Components.Lucide
+                   module_name: MyAppWeb.Components.Lucide,
+                   global_attrs: false
                  ] = ExIcon.prepare_assigns(tmp_dir, opts)
         end)
 
       assert output =~ "icon names must match"
+    end
+
+    test "writes the global attribute before the ones of the file", %{
+      tmp_dir: tmp_dir
+    } do
+      opts = [
+        icons: :all,
+        global_attrs: true,
+        provider: ExIcon.Lucide,
+        version: "1.8.0",
+        module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
+        module_name: MyAppWeb.Components.Lucide
+      ]
+
+      File.write!(
+        Path.join(tmp_dir, "arrow-left.svg"),
+        ~s(<svg width="24"></svg>)
+      )
+
+      assert [
+               icons: [{"arrow_left", {svg, []}}],
+               module_name: MyAppWeb.Components.Lucide,
+               global_attrs: true
+             ] = ExIcon.prepare_assigns(tmp_dir, opts)
+
+      assert svg == ~s(<svg {@rest} width="24" aria-hidden="true"></svg>)
     end
 
     test "skips excluded icons", %{tmp_dir: tmp_dir} do
@@ -284,7 +317,8 @@ defmodule ExIconTest do
 
       assert [
                icons: [{"arrow_left", _}],
-               module_name: MyAppWeb.Components.Lucide
+               module_name: MyAppWeb.Components.Lucide,
+               global_attrs: false
              ] = ExIcon.prepare_assigns(tmp_dir, opts)
     end
 
@@ -1418,6 +1452,25 @@ defmodule ExIconTest do
     end
   end
 
+  describe "render_global_attr/1" do
+    test "renders nothing if global attributes are turned off" do
+      assert ExIcon.render_global_attr(false) == ""
+    end
+
+    test "renders the attribute without options" do
+      assert ExIcon.render_global_attr(true) == "\n  attr :rest, :global"
+      assert ExIcon.render_global_attr([]) == "\n  attr :rest, :global"
+    end
+
+    test "renders the configured options" do
+      assert ExIcon.render_global_attr(
+               default: %{"class" => "size-6"},
+               include: ["fill"]
+             ) ==
+               ~s(\n  attr :rest, :global, default: %{"class" => "size-6"}, include: ["fill"])
+    end
+  end
+
   describe "indent/2" do
     test "indents a multi-line string" do
       assert ExIcon.indent(
@@ -1494,7 +1547,8 @@ defmodule ExIconTest do
           provider: ExIcon.Lucide,
           version: "1.8.0",
           module_path: "lib/my_app_web/components/lucide.ex",
-          module_name: MyAppWeb.Components.Lucide
+          module_name: MyAppWeb.Components.Lucide,
+          global_attrs: false
         ]
       ]
 
@@ -1508,11 +1562,74 @@ defmodule ExIconTest do
           provider: ExIcon.Lucide,
           version: "1.8.0",
           module_path: "lib/my_app_web/components/lucide.ex",
-          module_name: MyAppWeb.Components.Lucide
+          module_name: MyAppWeb.Components.Lucide,
+          global_attrs: false
         ]
       ]
 
       assert {:ok, _} = validate_icon_sets(config)
+    end
+
+    test "accepts global attributes" do
+      for global_attrs <- [
+            true,
+            false,
+            [],
+            [default: %{"class" => "size-6"}],
+            [include: ["fill"]],
+            [default: %{"class" => "size-6"}, include: ["fill"]]
+          ] do
+        assert {:ok, _} =
+                 validate_icon_sets(
+                   lucide: config_with_global_attrs(global_attrs)
+                 )
+      end
+    end
+
+    test "returns error for an unknown global attribute option" do
+      assert {:error, %NimbleOptions.ValidationError{} = error} =
+               validate_icon_sets(lucide: config_with_global_attrs(nope: 1))
+
+      assert Exception.message(error) =~ "unknown options [:nope]"
+    end
+
+    test "returns error if global attributes are not a boolean or list" do
+      assert {:error, %NimbleOptions.ValidationError{} = error} =
+               validate_icon_sets(lucide: config_with_global_attrs("yes"))
+
+      assert Exception.message(error) =~ "expected keyword list, got: \"yes\""
+    end
+
+    test "returns error if the global default is not a map of strings" do
+      assert {:error, %NimbleOptions.ValidationError{} = error} =
+               validate_icon_sets(
+                 lucide: config_with_global_attrs(default: ["class"])
+               )
+
+      assert Exception.message(error) =~ "expected map, got: [\"class\"]"
+
+      assert {:error, %NimbleOptions.ValidationError{} = error} =
+               validate_icon_sets(
+                 lucide: config_with_global_attrs(default: %{"class" => 1})
+               )
+
+      assert Exception.message(error) =~ ~s(map key "class": expected string)
+    end
+
+    test "returns error if the global include is not a list of strings" do
+      assert {:error, %NimbleOptions.ValidationError{} = error} =
+               validate_icon_sets(
+                 lucide: config_with_global_attrs(include: "fill")
+               )
+
+      assert Exception.message(error) =~ ~s(expected list, got: "fill")
+
+      assert {:error, %NimbleOptions.ValidationError{} = error} =
+               validate_icon_sets(
+                 lucide: config_with_global_attrs(include: [:fill])
+               )
+
+      assert Exception.message(error) =~ "at position 0: expected string"
     end
 
     test "accepts attribute options" do
@@ -1684,6 +1801,11 @@ defmodule ExIconTest do
     ExIcon.validate_config(icon_sets: icon_sets)
   end
 
+  defp config_with_global_attrs(global_attrs) do
+    attrs = config_with_attrs([])
+    Keyword.put(attrs, :global_attrs, global_attrs)
+  end
+
   defp config_with_attrs(attrs) do
     [
       icons: :all,
@@ -1698,7 +1820,8 @@ defmodule ExIconTest do
   defp render_attr(attr) do
     assigns = [
       icons: [{"arrow_left", {"<svg></svg>", [attr]}}],
-      module_name: MyAppWeb.Components.Lucide
+      module_name: MyAppWeb.Components.Lucide,
+      global_attrs: false
     ]
 
     EEx.eval_file(ExIcon.template_path(), assigns: assigns)

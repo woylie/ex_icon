@@ -48,6 +48,9 @@ ExIcon expects a configuration file named `.ex_icon.exs` in your project root.
       # SVG attributes to turn into component attributes, to override, or to
       # add. Example: ["stroke", {"stroke-width", default: "1.5"}]
       attrs: [],
+      # Whether the components accept the global HTML attributes. Can be a
+      # boolean or a keyword list with options to pass to `attr`.
+      global_attrs: false,
       # If supported by the provider, choose the style variants to generate
       # Example: [:outline, :solid]
       variants: []
@@ -181,6 +184,27 @@ end
 
 Note that if you generate a lot of icons, compilation times can increase
 substantially by adding component attributes.
+
+## Global attributes
+
+Generated components only accept the attributes you configure. Set
+`global_attrs` to also accept the global HTML attributes, such as `id`,
+`class`, `phx-click` and `data-*`:
+
+```elixir
+global_attrs: true
+```
+
+Instead of `true`, you can pass the `default` and `include` options of `attr`:
+
+```elixir
+global_attrs: [default: %{"class" => "size-6"}, include: ["fill"]]
+```
+
+ExIcon writes the attributes you pass to a component before the ones of the SVG
+file, so that yours take precedence. Both end up in the markup, and HTML keeps
+the first of the two. `<Lucide.arrow_left width="48" />` therefore renders with
+a width of 48, even if the icon has one.
 
 ## Variants
 

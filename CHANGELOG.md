@@ -16,6 +16,8 @@
   `mix ex_icon.gen.icons`. See `mix help ex_icon.gen.icons`.
 - Add `exclude` configuration option to skip individual icons.
 - Add `path` configuration option to generate an icon set from a local folder.
+- Add `global_attrs` configuration option to accept global HTML attributes
+  in the generated components.
 
 ### Changed
 

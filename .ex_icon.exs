@@ -6,6 +6,8 @@
       version: "1.8.0",
       module_path: "output/lucide.ex",
       module_name: MyAppWeb.Components.Lucide,
+      # accept the global HTML attributes, with a default class
+      global_attrs: [default: %{"class" => "size-6"}],
       attrs: [
         # attribute that defaults to the value in the SVG file
         "stroke",
@@ -16,7 +18,8 @@
         # attribute restricted to a set of values
         {"stroke-linecap", values: ["butt", "round", "square"]},
         # restricted values combined with an explicit default
-        {"stroke-linejoin", values: ["arcs", "miter", "round"], default: "miter"},
+        {"stroke-linejoin",
+         values: ["arcs", "miter", "round"], default: "miter"},
         # override existing attribute with fixed value
         {"fill", fixed: "currentColor"},
         # aria-hidden added automatically, but can be set explicitly
