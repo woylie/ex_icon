@@ -84,7 +84,7 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
           |> select_icon_sets(opts[:icon_set])
 
         results =
-          download_and_generate_all(icon_sets, cache_dir, refresh, force: force)
+          download_and_generate_all(icon_sets, cache_dir, refresh, force)
 
         IO.puts("Done.")
         if Enum.any?(icon_sets, &downloaded?/1), do: report_cache(cache_dir)
@@ -150,19 +150,23 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
     """)
   end
 
-  defp download_and_generate_all(config, cache_dir, refresh?, write_opts) do
-    Enum.each(config, fn {_name, opts} -> ExIcon.Target.targets(opts) end)
-
+  defp download_and_generate_all(config, cache_dir, refresh?, force?) do
+    # every icon set is resolved before anything is downloaded or written, so
+    # that a misconfigured set does not leave half of the modules regenerated
     config
+    |> Enum.map(fn {name, opts} ->
+      {name, opts, ExIcon.Target.targets(opts)}
+    end)
     |> with_refresh_flags(refresh?)
     |> Enum.flat_map(fn {icon_set, refresh_release?} ->
-      download_and_generate(icon_set, cache_dir, refresh_release?, write_opts)
+      download_and_generate(icon_set, cache_dir, refresh_release?, force?)
     end)
   end
 
   defp with_refresh_flags(config, refresh?) do
     {icon_sets, _seen} =
-      Enum.map_reduce(config, MapSet.new(), fn {_name, opts} = icon_set, seen ->
+      Enum.map_reduce(config, MapSet.new(), fn icon_set, seen ->
+        {_name, opts, _targets} = icon_set
         release = {Keyword.get(opts, :provider), Keyword.get(opts, :version)}
 
         refresh_release? = refresh? and not MapSet.member?(seen, release)
@@ -173,14 +177,13 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
   end
 
   defp download_and_generate(
-         {config_name, opts},
+         {config_name, opts, targets},
          cache_dir,
          refresh?,
-         write_opts
+         force?
        ) do
     IO.puts("Processing #{config_name}...")
 
-    targets = ExIcon.Target.targets(opts)
     icon_dir = ExIcon.Source.icon_dir(cache_dir, opts, refresh?)
 
     Enum.map(targets, fn {svg_folder, module_name, module_path} ->
@@ -189,12 +192,12 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
         module_name,
         module_path,
         opts,
-        write_opts
+        force?
       )
     end)
   end
 
-  defp generate(svg_dir, module_name, module_path, opts, write_opts) do
+  defp generate(svg_dir, module_name, module_path, opts, force?) do
     IO.puts("Generating #{inspect(module_name)}...")
 
     assigns =
@@ -209,12 +212,12 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
       |> formatter.()
 
     ExIcon.Template.verify_module!(contents)
-    write_module(module_path, contents, write_opts)
+    write_module(module_path, contents, force?)
   end
 
-  defp write_module(module_path, contents, write_opts) do
+  defp write_module(module_path, contents, force?) do
     relative_path = Path.relative_to_cwd(module_path)
-    create_opts = [quiet: true] ++ Keyword.take(write_opts, [:force])
+    create_opts = [quiet: true, force: force?]
 
     cond do
       File.read(module_path) == {:ok, contents} ->
