@@ -43,7 +43,7 @@ defmodule ExIcon.Source do
     end
   end
 
-  def icon_dir(cache_dir, opts, download_opts \\ []) do
+  def icon_dir(cache_dir, opts, refresh? \\ false) do
     case resolve!(opts) do
       {:path, path} ->
         path = existing_dir!(path)
@@ -51,7 +51,7 @@ defmodule ExIcon.Source do
         path
 
       {:release, provider, version} ->
-        cached_release(cache_dir, provider, version, download_opts)
+        cached_release(cache_dir, provider, version, refresh?)
     end
   end
 
@@ -67,11 +67,11 @@ defmodule ExIcon.Source do
     end
   end
 
-  defp cached_release(cache_dir, provider, version, download_opts) do
+  defp cached_release(cache_dir, provider, version, refresh?) do
     version = validate_version!(version)
     icon_dir = Path.join([cache_dir, cache_key(provider), version])
 
-    if Keyword.get(download_opts, :force, false), do: File.rm_rf!(icon_dir)
+    if refresh?, do: File.rm_rf!(icon_dir)
 
     if File.dir?(icon_dir) do
       IO.puts("Using cached #{provider_name(provider)} #{version}...")

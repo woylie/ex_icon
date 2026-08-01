@@ -145,7 +145,7 @@ defmodule ExIcon.SourceTest do
       File.write!(marker, "discarded")
 
       assert capture_io(fn ->
-               ExIcon.Source.icon_dir(cache_dir, opts, force: true)
+               ExIcon.Source.icon_dir(cache_dir, opts, true)
              end) =~ "Downloading local_provider 1.0.0..."
 
       refute File.exists?(marker)
@@ -246,7 +246,7 @@ defmodule ExIcon.SourceTest do
 
       capture_io(fn ->
         assert_raise RuntimeError, ~r/unable to fetch icons/, fn ->
-          ExIcon.Source.icon_dir(tmp_dir, opts, force: true)
+          ExIcon.Source.icon_dir(tmp_dir, opts, true)
         end
       end)
 
