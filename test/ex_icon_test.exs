@@ -1236,6 +1236,30 @@ defmodule ExIconTest do
       end
     end
 
+    test "normalizes the modes of the unpacked files", %{tmp_dir: tmp_dir} do
+      source = Path.join(tmp_dir, "source")
+      File.mkdir_p!(Path.join(source, "icons"))
+      icon = Path.join([source, "icons", "arrow-left.svg"])
+      File.write!(icon, "<svg></svg>")
+      File.chmod!(icon, 0o777)
+
+      zip_path = Path.join(tmp_dir, "modes.zip")
+
+      {:ok, _} =
+        :zip.create(String.to_charlist(zip_path), [~c"icons"],
+          cwd: String.to_charlist(source)
+        )
+
+      target = Path.join(tmp_dir, "target")
+      File.mkdir_p!(target)
+
+      assert ExIcon.unpack_archive!(File.read!(zip_path), target) == :ok
+
+      unpacked = Path.join([target, "icons", "arrow-left.svg"])
+      assert File.stat!(unpacked).mode == 0o100644
+      assert File.stat!(Path.join(target, "icons")).mode == 0o40755
+    end
+
     @tag :capture_log
     test "keeps traversing entries inside the target folder", %{
       tmp_dir: tmp_dir

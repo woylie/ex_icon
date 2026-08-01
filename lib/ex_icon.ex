@@ -636,6 +636,16 @@ defmodule ExIcon do
     end
   end
 
+  # an archive decides the modes of the files it is unpacked into, and the cache
+  # is shared between projects and users on the machine
+  defp normalize_modes!(dir) do
+    for path <- Path.wildcard(Path.join(dir, "**"), match_dot: true) do
+      File.chmod!(path, if(File.dir?(path), do: 0o755, else: 0o644))
+    end
+
+    File.chmod!(dir, 0o755)
+  end
+
   defp download_icons!(provider, version) do
     url =
       version
@@ -677,7 +687,7 @@ defmodule ExIcon do
   def unpack_archive!(zip, path) do
     case :zip.extract(zip, [{:cwd, String.to_charlist(path)}]) do
       {:ok, _} ->
-        :ok
+        normalize_modes!(path)
 
       result ->
         raise """
