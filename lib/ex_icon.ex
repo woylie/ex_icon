@@ -2,8 +2,8 @@ defmodule ExIcon do
   @moduledoc """
   Refer to the readme for usage instructions.
 
-  This module only contains helper functions that you probably don't need to
-  use directly.
+  All functions of this module are internal. They are only used by
+  `mix ex_icon.gen.icons`.
   """
 
   @options_schema [
@@ -134,20 +134,24 @@ defmodule ExIcon do
              component_attrs: [{binary, keyword}]
   def transform_svg(svg, attrs \\ [])
       when is_binary(svg) and is_list(attrs) do
-    case extract_svg(svg) do
-      {:ok, {svg_attrs, inner}} ->
-        merged = merge_attrs(svg_attrs, normalize_attrs(attrs))
-        rendered = Enum.map_join(merged, " ", &render_attr/1)
+    case ExIcon.SVG.parse(svg) do
+      {:ok, parsed} ->
+        transform_parsed(parsed, attrs)
 
-        component_attrs =
-          for {:component, name, value, opts} <- merged,
-              do: {to_snake_case(name), attr_options(name, value, opts)}
-
-        {~s(<svg #{rendered}>#{inner}</svg>), component_attrs}
-
-      :error ->
-        {String.trim(svg), []}
+      {:error, reason} ->
+        raise ArgumentError, "invalid SVG: #{reason}"
     end
+  end
+
+  defp transform_parsed({svg_attrs, inner}, attrs) do
+    merged = merge_attrs(svg_attrs, normalize_attrs(attrs))
+    rendered = Enum.map_join(merged, " ", &render_attr/1)
+
+    component_attrs =
+      for {:component, name, value, opts} <- merged,
+          do: {to_snake_case(name), attr_options(name, value, opts)}
+
+    {~s(<svg #{rendered}>#{inner}</svg>), component_attrs}
   end
 
   defp normalize_attrs(attrs) do
@@ -248,7 +252,9 @@ defmodule ExIcon do
     "#{name}={@#{to_snake_case(name)}}"
   end
 
-  defp render_attr({:fixed, name, value, _values}), do: ~s(#{name}="#{value}")
+  defp render_attr({:fixed, name, value, _values}) do
+    ~s(#{name}="#{ExIcon.SVG.escape_attribute(value)}")
+  end
 
   defp find_attr(attrs, name) do
     name = String.downcase(name)
@@ -271,21 +277,6 @@ defmodule ExIcon do
     case find_spec(specs, name) do
       nil -> {nil, specs}
       spec -> {spec, List.delete(specs, spec)}
-    end
-  end
-
-  defp extract_svg(svg) do
-    case Regex.run(~r/<svg\s*(.*?)>(.*)<\/svg>/s, svg) do
-      [_, raw_attrs, inner] ->
-        attrs =
-          ~r/([\w-]+)="(.*?)"/
-          |> Regex.scan(raw_attrs)
-          |> Enum.map(fn [_, key, val] -> {key, val} end)
-
-        {:ok, {attrs, inner}}
-
-      nil ->
-        :error
     end
   end
 
@@ -413,8 +404,9 @@ defmodule ExIcon do
       |> Enum.reject(&MapSet.member?(exclude, &1))
       |> Enum.map(fn icon_name ->
         with {:ok, function_name} <- function_name(icon_name),
-             svg when is_binary(svg) <- read_icon(path, icon_name) do
-          {function_name, transform_svg(svg, attrs)}
+             svg when is_binary(svg) <- read_icon(path, icon_name),
+             {:ok, parsed} <- parse_icon(icon_name, svg) do
+          {function_name, transform_parsed(parsed, attrs)}
         else
           _ -> nil
         end
@@ -469,6 +461,17 @@ defmodule ExIcon do
     end
 
     icons
+  end
+
+  defp parse_icon(name, svg) do
+    case ExIcon.SVG.parse(svg) do
+      {:ok, parsed} ->
+        {:ok, parsed}
+
+      {:error, reason} ->
+        IO.puts("Skipping #{name}.svg: #{reason}")
+        :error
+    end
   end
 
   defp read_icon(path, name) do
@@ -705,6 +708,48 @@ defmodule ExIcon do
   def validate_config(config) do
     NimbleOptions.validate(config, @config_schema)
   end
+
+  @doc false
+  # A generated module should only contain a moduledoc, a use, attr calls, and
+  # one component per icon. If there is a bug in the parser that results in
+  # anything else being added to the module, generation is aborted.
+  def verify_module!(contents) do
+    with {:ok, {:defmodule, _, [_alias, [do: body]]}} <-
+           Code.string_to_quoted(contents),
+         [] <- Enum.reject(module_body(body), &allowed_node?/1) do
+      :ok
+    else
+      _ ->
+        raise """
+        Refusing to write the generated module
+
+        It contains code that does not belong to an icon component. This is a
+        bug in ExIcon. Please report it.
+        """
+    end
+  end
+
+  defp module_body({:__block__, _meta, nodes}), do: nodes
+  defp module_body(node), do: [node]
+
+  defp allowed_node?({:@, _, [{:moduledoc, _, [doc]}]}), do: is_binary(doc)
+
+  defp allowed_node?({:use, _, [{:__aliases__, _, [:Phoenix, :Component]}]}),
+    do: true
+
+  defp allowed_node?({:attr, _, args}),
+    do: Enum.all?(args, &Macro.quoted_literal?/1)
+
+  defp allowed_node?({:def, _, [{name, _, [{:assigns, _, ctx}]}, [do: body]]})
+       when is_atom(name) and is_atom(ctx),
+       do: heex_sigil?(body)
+
+  defp allowed_node?(_node), do: false
+
+  defp heex_sigil?({:sigil_H, _, [{:<<>>, _, [content]}, []]}),
+    do: is_binary(content)
+
+  defp heex_sigil?(_node), do: false
 
   @doc false
   def template_path do

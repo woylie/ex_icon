@@ -14,12 +14,21 @@
   several sizes.
 - Add `--config`, `--force`, and `--cache-dir` arguments to
   `mix ex_icon.gen.icons`. See `mix help ex_icon.gen.icons`.
-- Add `exclude` configuration option to skip icons of a release.
+- Add `exclude` configuration option to skip individual icons.
 
 ### Changed
 
 - Make `ExIcon.transform_svg/2` internal. The `ExIcon` module has no public
   functions anymore.
+- Skip icons that use SVG elements or attributes that ExIcon does not know,
+  which prevents scripts and event handlers from being added to generated
+  components. Remove `metadata` elements and elements with a namespace prefix
+  other than `svg`.
+- Only allow `href` and `xlink:href` values that point at an ID in the same
+  file. Reject `style` values that contain `url()`.
+- The handling of whitespaces and character references such as `&#233;` was
+  changed. Regenerating your icon modules with this version may produce diffs
+  even though the source SVG files haven't changed.
 - Cache downloaded releases in the Mix cache folder instead of downloading them
   into a shared temporary folder on every run.
 - Only move a release into the cache once it is complete, so that an
@@ -35,10 +44,11 @@
   release.
 - Do not ask to overwrite generated modules that have not changed.
 - Format all generated modules instead of only the first one.
-- Prefix generated function names that start with a digit with `icon_`, so that
-  `icons: :all` works for Simple Icons.
-- Raise instead of generating a module that does not compile if two icons map to
-  the same function name.
+- Keep attributes that are written with single quotes, and namespaced attribute
+  names such as `xmlns:xlink`, which used to end up as `xlink`.
+- Add an `icon_` prefix to generated function names that start with a digit, so
+  that `icons: :all` works for Simple Icons.
+- Raise if two icons map to the same function name.
 
 ### Security
 
@@ -48,6 +58,10 @@
 - Skip icons whose names cannot be turned into function names. Previously, a
   file name in a release was written into the generated module unchecked, where
   it could add arbitrary code.
+- Parse icon files instead of copying their contents into the generated module.
+  Previously, an icon file could end the heredoc of a component and add code to
+  the module, or add a HEEx expression that was evaluated every time the
+  component was rendered.
 
 ## [0.3.0] - 2026-04-10
 
