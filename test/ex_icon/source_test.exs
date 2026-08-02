@@ -479,6 +479,20 @@ defmodule ExIcon.SourceTest do
       assert File.ls!(Path.join(tmp_dir, "cache")) == ["target"]
     end
 
+    test "refuses an archive whose local file header is missing", %{
+      tmp_dir: tmp_dir
+    } do
+      zip = build_zip_without_local_header()
+      target = Path.join(tmp_dir, "target")
+      File.mkdir_p!(target)
+
+      assert_raise RuntimeError, ~r/no local file header/, fn ->
+        ExIcon.Source.unpack_archive!(zip, target)
+      end
+
+      assert File.ls!(target) == []
+    end
+
     test "refuses entries with an absolute path", %{tmp_dir: tmp_dir} do
       zip = build_zip_with_absolute_entry()
       target = Path.join(tmp_dir, "target")
@@ -505,6 +519,16 @@ defmodule ExIcon.SourceTest do
     binary_part(zip, 0, offset) <>
       <<100::little-32>> <>
       binary_part(zip, offset + 4, byte_size(zip) - offset - 4)
+  end
+
+  # the central directory of every entry points at its local file header
+  defp build_zip_without_local_header do
+    zip = build_zip([{~c"icons/arrow-left.svg", "<svg></svg>"}])
+    {position, length} = :binary.match(zip, <<0x50, 0x4B, 0x03, 0x04>>)
+
+    binary_part(zip, 0, position) <>
+      <<0, 0, 0, 0>> <>
+      binary_part(zip, position + length, byte_size(zip) - position - length)
   end
 
   # only the local file header decides where the file is written; the two names

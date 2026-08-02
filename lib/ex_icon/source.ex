@@ -191,16 +191,21 @@ defmodule ExIcon.Source do
     max_size = Keyword.get(opts, :max_size, @max_release_size)
     entries = list_entries!(zip)
 
-    refuse_unsafe_entries!(entry_names(entries))
+    refuse_unsafe_entries!(entry_names(entries) ++ local_names!(zip, entries))
     refuse_above!(declared_size(entries), max_size)
 
-    files = extract_files!(zip)
+    case :zip.extract(zip, [{:cwd, String.to_charlist(path)}]) do
+      {:ok, _} ->
+        check_unpacked_size!(path, max_size)
+        normalize_modes!(path)
 
-    refuse_unsafe_entries!(file_names(files))
-    refuse_above!(unpacked_size(files), max_size)
+      result ->
+        raise """
+        Unable to unpack zip archive
 
-    write_files!(files, path)
-    normalize_modes!(path)
+        #{inspect(result, pretty: true)}
+        """
+    end
   end
 
   defp list_entries!(zip) do
@@ -219,41 +224,23 @@ defmodule ExIcon.Source do
 
   # an entry is named in the central directory and again in the local file
   # header, and only the latter decides where :zip.extract writes it
-  defp extract_files!(zip) do
-    case :zip.extract(zip, [:memory]) do
-      {:ok, files} ->
-        files
-
-      result ->
-        raise """
-        Unable to unpack zip archive
-
-        #{inspect(result, pretty: true)}
-        """
-    end
+  defp local_names!(zip, entries) do
+    for {:zip_file, _name, _info, _comment, offset, _size} <- entries,
+        do: local_name!(zip, offset)
   end
 
-  # a folder in an archive comes back as an entry with no content
-  defp write_files!(files, path) do
-    for {name, content} <- files,
-        name = List.to_string(name),
-        not String.ends_with?(name, "/") do
-      write_file!(Path.join(path, name), content)
-    end
-  end
+  defp local_name!(zip, offset) do
+    case zip do
+      <<_::binary-size(^offset), 0x50, 0x4B, 0x03, 0x04, _::binary-size(22),
+        length::little-16, _extra::little-16, name::binary-size(length),
+        _::binary>> ->
+        name
 
-  defp write_file!(file, content) do
-    with :ok <- File.mkdir_p(Path.dirname(file)),
-         :ok <- File.write(file, content) do
-      :ok
-    else
-      {:error, reason} ->
+      _zip ->
         raise """
-        Unable to unpack zip archive
+        Unable to read zip archive
 
-        Tried writing '#{file}', got:
-
-        #{inspect(reason)}
+        The archive has no local file header at offset #{offset}.
         """
     end
   end
@@ -282,10 +269,6 @@ defmodule ExIcon.Source do
         do: List.to_string(name)
   end
 
-  defp file_names(files) do
-    for {name, _content} <- files, do: List.to_string(name)
-  end
-
   defp unsafe_path?(name) do
     Path.type(name) != :relative or ".." in Path.split(name)
   end
@@ -300,10 +283,12 @@ defmodule ExIcon.Source do
     end)
   end
 
-  defp unpacked_size(files) do
-    Enum.reduce(files, 0, fn {_name, content}, total ->
-      total + byte_size(content)
-    end)
+  defp check_unpacked_size!(path, max_size) do
+    path
+    |> Path.join("**")
+    |> Path.wildcard(match_dot: true)
+    |> Enum.reduce(0, fn entry, total -> total + File.stat!(entry).size end)
+    |> refuse_above!(max_size)
   end
 
   defp refuse_above!(total, max_size) when total <= max_size, do: :ok
