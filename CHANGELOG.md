@@ -7,6 +7,9 @@
 - Check the generated module before formatting it, so that an icon which does
   not produce valid code is reported instead of raising in the formatter.
 - Turn a CRLF and a lone CR in an icon into a LF, as XML requires.
+- Add an `icon_` prefix to a generated function name that is a reserved word in
+  Elixir, so that `end.svg` becomes `icon_end` instead of generating a module
+  that does not compile.
 
 ### Security
 

@@ -85,7 +85,8 @@ Run `mix help ex_icon.gen.icons` for the available command line arguments.
 Each function component is named after its SVG file in snake case, so
 `arrow-left.svg` becomes `arrow_left`. Names that start with a digit get an
 `icon_` prefix, since HEEx does not accept component names that start with a
-digit. `1password.svg` becomes `icon_1password`.
+digit. `1password.svg` becomes `icon_1password`. Names that are reserved words
+in Elixir get the same prefix, so `end.svg` becomes `icon_end`.
 
 Icons with names that cannot be turned into function names are skipped and
 reported. If you listed such an icon in your configuration, the task fails
