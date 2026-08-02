@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fixed
+
+- Check the generated module before formatting it, so that an icon which does
+  not produce valid code is reported instead of raising in the formatter.
+
 ### Security
 
 - Refuse release archives with entries that would be written outside the target

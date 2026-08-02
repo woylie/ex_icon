@@ -97,8 +97,17 @@ defmodule ExIcon.TemplateTest do
     end
 
     test "refuses source that does not parse" do
-      assert_raise RuntimeError, ~r/does not belong to an icon/, fn ->
+      assert_raise RuntimeError, ~r/is not valid Elixir/, fn ->
         ExIcon.Template.verify_module!("defmodule G do")
+      end
+    end
+
+    # the formatter would raise on this before the check could report it
+    test "refuses a component named after a reserved word" do
+      contents = String.replace(@valid, "def arrow_left", "def do")
+
+      assert_raise RuntimeError, ~r/is not valid Elixir/, fn ->
+        ExIcon.Template.verify_module!(contents)
       end
     end
   end
