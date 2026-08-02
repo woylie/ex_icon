@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [0.5.0] - 2026-08-02
+
 ### Fixed
 
 - Check the generated module before formatting it, so that an icon which does

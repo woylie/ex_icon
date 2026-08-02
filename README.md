@@ -20,7 +20,7 @@ Add `ex_icon` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ex_icon, "~> 0.4.0", only: :dev}
+    {:ex_icon, "~> 0.5.0", only: :dev}
   ]
 end
 ```
