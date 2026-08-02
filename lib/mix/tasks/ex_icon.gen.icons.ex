@@ -204,15 +204,13 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
       [module_name: module_name] ++
         ExIcon.Components.prepare_assigns(svg_dir, opts)
 
-    {formatter, _opts} = Format.formatter_for_file(module_path)
-
     contents =
-      ExIcon.Template.template_path()
-      |> EEx.eval_file(assigns: assigns)
-      |> formatter.()
+      EEx.eval_file(ExIcon.Template.template_path(), assigns: assigns)
 
     ExIcon.Template.verify_module!(contents)
-    write_module(module_path, contents, force?)
+
+    {formatter, _opts} = Format.formatter_for_file(module_path)
+    write_module(module_path, formatter.(contents), force?)
   end
 
   defp write_module(module_path, contents, force?) do

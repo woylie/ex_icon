@@ -241,6 +241,54 @@ defmodule ExIcon.ComponentsTest do
       assert output =~ "icon names must match"
     end
 
+    test "prefixes icon names that are reserved words", %{tmp_dir: tmp_dir} do
+      opts = [
+        icons: :all,
+        provider: ExIcon.Providers.Lucide,
+        version: "1.8.0",
+        module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
+        module_name: MyAppWeb.Components.Lucide
+      ]
+
+      # `WHEN` folds to `when`, and `not` is a reserved word that a function may
+      # still be named after
+      for name <- ~w(do end unquote unquote_splicing WHEN not arrow-left) do
+        File.write!(Path.join(tmp_dir, "#{name}.svg"), "<svg></svg>")
+      end
+
+      assert [icons: icons, global_attrs: false] =
+               ExIcon.Components.prepare_assigns(tmp_dir, opts)
+
+      names = Enum.map(icons, &elem(&1, 0))
+
+      assert Enum.sort(names) == [
+               "arrow_left",
+               "icon_do",
+               "icon_end",
+               "icon_unquote",
+               "icon_unquote_splicing",
+               "icon_when",
+               "not"
+             ]
+    end
+
+    test "generates a listed icon whose name is a reserved word", %{
+      tmp_dir: tmp_dir
+    } do
+      opts = [
+        icons: ["end"],
+        provider: ExIcon.Providers.Lucide,
+        version: "1.8.0",
+        module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
+        module_name: MyAppWeb.Components.Lucide
+      ]
+
+      File.write!(Path.join(tmp_dir, "end.svg"), "<svg></svg>")
+
+      assert [icons: [{"icon_end", _}], global_attrs: false] =
+               ExIcon.Components.prepare_assigns(tmp_dir, opts)
+    end
+
     test "writes the global attribute before the ones of the file", %{
       tmp_dir: tmp_dir
     } do

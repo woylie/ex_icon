@@ -55,14 +55,20 @@ defmodule ExIcon.Components do
   defp ensure_nothing_missing!(_wanted, _icons), do: :ok
 
   # Icon names end up as function names in the generated module, so they are
-  # restricted to characters that can produce one. HEEx only accepts component
-  # names that start with a lowercase letter, so names starting with a digit
-  # get an `icon_` prefix.
+  # restricted to characters that can produce one. Names that cannot be used as
+  # they are get an `icon_` prefix.
   @icon_name_regex ~r/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/
+
+  # a function cannot be named after a reserved word; `unquote` and
+  # `unquote_splicing` parse but are special forms, and `not` is fine
+  @reserved_names ~w(
+    after and catch do else end false fn in nil or rescue true unquote
+    unquote_splicing when
+  )
 
   defp function_name(icon_name) do
     if Regex.match?(@icon_name_regex, icon_name) do
-      {:ok, icon_name |> ExIcon.Attrs.to_snake_case() |> prefix_digit()}
+      {:ok, icon_name |> ExIcon.Attrs.to_snake_case() |> prefix_name()}
     else
       IO.puts(
         "Skipping #{inspect(icon_name)}: icon names must match " <>
@@ -73,10 +79,13 @@ defmodule ExIcon.Components do
     end
   end
 
-  defp prefix_digit(<<char, _::binary>> = name) when char in ?0..?9,
+  # HEEx does not accept a component name that starts with a digit
+  defp prefix_name(<<char, _::binary>> = name) when char in ?0..?9,
     do: "icon_" <> name
 
-  defp prefix_digit(name), do: name
+  defp prefix_name(name) when name in @reserved_names, do: "icon_" <> name
+
+  defp prefix_name(name), do: name
 
   defp ensure_unique_names!(icons) do
     duplicates =

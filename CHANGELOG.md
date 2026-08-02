@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+## [0.5.0] - 2026-08-02
+
+### Fixed
+
+- Check the generated module before formatting it, so that an icon which does
+  not produce valid code is reported instead of raising in the formatter.
+- Turn a CRLF and a lone CR in an icon into a LF, as XML requires.
+- Add an `icon_` prefix to a generated function name that is a reserved word in
+  Elixir, so that `end.svg` becomes `icon_end` instead of generating a module
+  that does not compile.
+
+### Security
+
+- Refuse release archives with entries that would be written outside the target
+  folder.
+- Check the name a zip entry carries in its local file header, not only the one
+  in the central directory.
+- Refuse a release archive whose entries cannot be listed, instead of unpacking
+  it unchecked.
+- Only allow known CSS functions in a `style` value, and reject values that
+  contain a backslash.
+- Only allow `clip-path`, `color`, `fill`, `mask`, `stop-color` and `stroke`
+  values that point into the same file.
+- Hold a character written into an icon to the same rule as a reference to it,
+  which was only applied to references before.
+- Reject control characters and invisible characters such as a bidirectional
+  override.
+
 ## [0.4.0] - 2026-08-01
 
 ### Added

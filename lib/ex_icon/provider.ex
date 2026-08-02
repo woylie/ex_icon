@@ -6,7 +6,9 @@ defmodule ExIcon.Provider do
   @doc """
   Returns the download URL for the release with the given version.
 
-  The URL must point to a zip file.
+  The URL must point to a zip file, and must use https unless it points at the
+  local machine. Only this URL is checked: the HTTP client follows redirects,
+  which may lead to another host or to plain http.
   """
   @callback release_url(version) :: url
             when version: String.t(), url: String.t()

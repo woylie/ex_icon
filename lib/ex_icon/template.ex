@@ -19,19 +19,47 @@ defmodule ExIcon.Template do
   # one component per icon. If there is a bug in the parser that results in
   # anything else being added to the module, generation is aborted.
   def verify_module!(contents) do
-    with {:ok, {:defmodule, _, [_alias, [do: body]]}} <-
-           Code.string_to_quoted(contents),
-         [] <- Enum.reject(module_body(body), &allowed_node?/1) do
-      :ok
-    else
-      _ ->
-        raise """
-        Refusing to write the generated module
+    case parse(contents) do
+      {:ok, {:defmodule, _, [_alias, [do: body]]}} ->
+        if Enum.all?(module_body(body), &allowed_node?/1),
+          do: :ok,
+          else: refuse_unexpected!()
 
-        It contains code that does not belong to an icon component. This is a
-        bug in ExIcon. Please report it.
-        """
+      {:ok, _quoted} ->
+        refuse_unexpected!()
+
+      {:syntax_error, message} ->
+        refuse_syntax_error!(message)
     end
+  end
+
+  # the module is checked before it is formatted, so that an icon that does not
+  # produce valid code is reported here instead of by the formatter
+  defp parse(contents) do
+    {:ok, Code.string_to_quoted!(contents)}
+  rescue
+    error -> {:syntax_error, Exception.message(error)}
+  end
+
+  defp refuse_syntax_error!(message) do
+    raise """
+    Refusing to write the generated module
+
+    The generated code is not valid Elixir:
+
+        #{message}
+
+    An icon whose name cannot be used as a function name can cause this.
+    """
+  end
+
+  defp refuse_unexpected! do
+    raise """
+    Refusing to write the generated module
+
+    It contains code that does not belong to an icon component. This is a
+    bug in ExIcon. Please report it.
+    """
   end
 
   defp module_body({:__block__, _meta, nodes}), do: nodes

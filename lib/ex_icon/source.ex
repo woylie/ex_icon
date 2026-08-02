@@ -116,8 +116,9 @@ defmodule ExIcon.Source do
     end
   end
 
-  # a release is fetched over https, except from the local machine, so that a
-  # provider can be developed against a local server
+  # the URL a provider returns has to be https, except on the local machine, so
+  # that a provider can be developed against a local server; redirects are
+  # followed without being checked again
   @loopback_hosts ~w(localhost 127.0.0.1 ::1 [::1])
 
   defp validate_url!(url, provider) do
@@ -189,7 +190,10 @@ defmodule ExIcon.Source do
 
   def unpack_archive!(zip, path, opts \\ []) do
     max_size = Keyword.get(opts, :max_size, @max_release_size)
-    check_declared_size!(zip, max_size)
+    entries = list_entries!(zip)
+
+    refuse_unsafe_entries!(entry_names(entries) ++ local_names!(zip, entries))
+    refuse_above!(declared_size(entries), max_size)
 
     case :zip.extract(zip, [{:cwd, String.to_charlist(path)}]) do
       {:ok, _} ->
@@ -205,22 +209,79 @@ defmodule ExIcon.Source do
     end
   end
 
-  defp check_declared_size!(zip, max_size) do
+  defp list_entries!(zip) do
     case :zip.list_dir(zip) do
       {:ok, entries} ->
         entries
-        |> Enum.reduce(0, fn
-          {:zip_file, _name, info, _comment, _offset, _size}, total ->
-            total + elem(info, 1)
 
-          _entry, total ->
-            total
-        end)
-        |> refuse_above!(max_size)
+      result ->
+        raise """
+        Unable to read zip archive
 
-      _result ->
-        :ok
+        #{inspect(result, pretty: true)}
+        """
     end
+  end
+
+  # an entry is named in the central directory and again in the local file
+  # header, and only the latter decides where :zip.extract writes it
+  defp local_names!(zip, entries) do
+    for {:zip_file, _name, _info, _comment, offset, _size} <- entries,
+        do: local_name!(zip, offset)
+  end
+
+  defp local_name!(zip, offset) do
+    case zip do
+      <<_::binary-size(^offset), 0x50, 0x4B, 0x03, 0x04, _::binary-size(22),
+        length::little-16, _extra::little-16, name::binary-size(length),
+        _::binary>> ->
+        name
+
+      _zip ->
+        raise """
+        Unable to read zip archive
+
+        The archive has no local file header at offset #{offset}.
+        """
+    end
+  end
+
+  # a path that climbs above the target only in total passes Erlang's own check,
+  # so `../icons/arrow-left.svg` nets out at zero and lands outside it
+  defp refuse_unsafe_entries!(names) do
+    case Enum.filter(names, &unsafe_path?/1) do
+      [] ->
+        :ok
+
+      unsafe_entries ->
+        raise """
+        Refusing to unpack zip archive
+
+        The archive contains entries that would be written outside the
+        target folder:
+
+        #{Enum.map_join(unsafe_entries, "\n", &"    #{&1}")}
+        """
+    end
+  end
+
+  defp entry_names(entries) do
+    for {:zip_file, name, _info, _comment, _offset, _size} <- entries,
+        do: List.to_string(name)
+  end
+
+  defp unsafe_path?(name) do
+    Path.type(name) != :relative or ".." in Path.split(name)
+  end
+
+  defp declared_size(entries) do
+    Enum.reduce(entries, 0, fn
+      {:zip_file, _name, info, _comment, _offset, _size}, total ->
+        total + elem(info, 1)
+
+      _entry, total ->
+        total
+    end)
   end
 
   defp check_unpacked_size!(path, max_size) do

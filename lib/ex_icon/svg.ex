@@ -25,8 +25,30 @@ defmodule ExIcon.SVG do
   # attributes that can load other documents
   @references ~w(href xlink:href)
 
+  # attributes whose value can reference another document with url()
+  @funciri_attributes ~w(clip-path color fill mask stop-color stroke)
+
+  # functions an icon may use in a style or paint value; a blocklist would miss
+  # image-set(), src() and every future CSS function that fetches a resource.
+  # attr() is left out because it can be typed to produce a url()
+  @functions ~w(
+    abs acos asin atan atan2 blur brightness calc circle clamp color color-mix
+    conic-gradient contrast cos cubic-bezier drop-shadow ellipse exp grayscale
+    hsl hsla hue-rotate hwb hypot inset invert lab lch linear linear-gradient
+    log matrix matrix3d max min mod oklab oklch opacity path perspective
+    polygon pow radial-gradient rect rem repeating-conic-gradient
+    repeating-linear-gradient repeating-radial-gradient rgb rgba rotate
+    rotate3d rotateX rotateY rotateZ round saturate scale scale3d scaleX
+    scaleY scaleZ sepia sign sin skew skewX skewY sqrt steps tan translate
+    translate3d translateX translateY translateZ var xywh
+  )
+
   @downcased_elements Enum.map(@elements, &String.downcase/1)
   @downcased_attributes Enum.map(@attributes, &String.downcase/1)
+  @downcased_functions Enum.map(@functions, &String.downcase/1)
+
+  @function_regex ~r/([a-zA-Z][a-zA-Z0-9-]*)\s*\(/
+  @url_regex ~r/url\s*\(\s*['"]?([^'")]*)/i
 
   @attribute_regex ~r/^([a-zA-Z_:][a-zA-Z0-9:_.-]*)\s*=\s*("[^"]*"|'[^']*')/s
   @entity_regex ~r/^(#x[0-9a-fA-F]+|#[0-9]+|amp|lt|gt|quot|apos);/
@@ -41,13 +63,22 @@ defmodule ExIcon.SVG do
   """
   @spec parse(binary) :: {:ok, {[{binary, binary}], binary}} | {:error, binary}
   def parse(svg) when is_binary(svg) do
-    with {:ok, start} <- svg |> String.trim_leading("\uFEFF") |> prologue(),
+    with {:ok, start} <- svg |> normalize() |> prologue(),
          {:ok, root_node, rest} <- element_node(start, false),
          {:ok, {attrs, children}} <- root(root_node),
          :ok <- eof(rest) do
       {:ok,
        {attrs, children |> Enum.map(&serialize/1) |> IO.iodata_to_binary()}}
     end
+  end
+
+  # a byte order mark is dropped and, as XML requires, a CRLF or a lone CR
+  # becomes a LF
+  defp normalize(svg) do
+    svg
+    |> String.trim_leading("﻿")
+    |> String.replace("\r\n", "\n")
+    |> String.replace("\r", "\n")
   end
 
   # skip xml declarations, doctypes and comments (commonly added by design
@@ -222,17 +253,58 @@ defmodule ExIcon.SVG do
   defp allowed_value(name, value) do
     case String.downcase(name) do
       reference when reference in @references ->
-        if String.starts_with?(value, "#"),
-          do: :ok,
-          else: {:error, "#{name} may only point into the same file"}
+        same_file(name, value)
 
       "style" ->
-        if String.contains?(String.downcase(value), "url("),
-          do: {:error, "style may not load a resource"},
-          else: :ok
+        allowed_functions(name, value, @downcased_functions)
+
+      funciri when funciri in @funciri_attributes ->
+        allowed_functions(name, value, ["url" | @downcased_functions])
 
       _name ->
         :ok
+    end
+  end
+
+  defp same_file(name, value) do
+    if String.starts_with?(value, "#"),
+      do: :ok,
+      else: {:error, "#{name} may only point into the same file"}
+  end
+
+  defp allowed_functions(name, value, allowed) do
+    with :ok <- refuse_escapes(name, value),
+         :ok <- refuse_unknown_functions(value, allowed) do
+      refuse_external_url(name, value)
+    end
+  end
+
+  # a CSS escape can spell url( as \75 rl(, so a value that needs one is refused
+  # rather than unescaped
+  defp refuse_escapes(name, value) do
+    if String.contains?(value, "\\"),
+      do: {:error, "#{name} may not contain a backslash"},
+      else: :ok
+  end
+
+  defp refuse_unknown_functions(value, allowed) do
+    @function_regex
+    |> Regex.scan(value, capture: :all_but_first)
+    |> Enum.map(fn [function] -> String.downcase(function) end)
+    |> Enum.find(&(&1 not in allowed))
+    |> case do
+      nil -> :ok
+      function -> {:error, "the #{function}() function is not allowed"}
+    end
+  end
+
+  defp refuse_external_url(name, value) do
+    @url_regex
+    |> Regex.scan(value, capture: :all_but_first)
+    |> Enum.all?(fn [target] -> String.starts_with?(target, "#") end)
+    |> case do
+      true -> :ok
+      false -> {:error, "#{name} may only point into the same file"}
     end
   end
 
@@ -294,7 +366,9 @@ defmodule ExIcon.SVG do
         decode(rest, [text | acc])
 
       :nomatch ->
-        {:ok, IO.iodata_to_binary([Enum.reverse(acc), binary])}
+        decoded = IO.iodata_to_binary([Enum.reverse(acc), binary])
+
+        with :ok <- allowed_characters(decoded), do: {:ok, decoded}
     end
   end
 
@@ -308,14 +382,39 @@ defmodule ExIcon.SVG do
 
   # the characters XML allows; without the check, a reference to a surrogate
   # would raise instead of skipping the icon
+  defguardp xml_character?(number)
+            when number in [0x9, 0xA, 0xD] or
+                   number in 0x20..0xD7FF or
+                   number in 0xE000..0xFFFD or
+                   number in 0x10000..0x10FFFF
+
+  # XML 1.0 allows these, but a control character has no place in an icon, and
+  # an invisible one can hide or reorder what a reader of the generated module
+  # sees
+  defguardp invisible?(number)
+            when number in 0x7F..0x9F or number in [0xAD, 0xFEFF] or
+                   number in 0x200B..0x200F or number in 0x2028..0x2029 or
+                   number in 0x202A..0x202E or number in 0x2066..0x2069
+
   defp codepoint(number)
-       when number in [0x9, 0xA, 0xD] or
-              number in 0x20..0xD7FF or
-              number in 0xE000..0xFFFD or
-              number in 0x10000..0x10FFFF,
+       when xml_character?(number) and not invisible?(number),
        do: {:ok, <<number::utf8>>}
 
   defp codepoint(_number), do: :error
+
+  # a character written into the file is held to the same rule as a reference
+  defp allowed_characters(<<>>), do: :ok
+
+  defp allowed_characters(<<number::utf8, rest::binary>>)
+       when xml_character?(number) and not invisible?(number),
+       do: allowed_characters(rest)
+
+  defp allowed_characters(<<number::utf8, _rest::binary>>) do
+    hex = number |> Integer.to_string(16) |> String.pad_leading(4, "0")
+    {:error, "the character U+#{hex} is not allowed in an icon"}
+  end
+
+  defp allowed_characters(_binary), do: {:error, "malformed character"}
 
   defp serialize({:text, text}), do: escape_text(text)
 

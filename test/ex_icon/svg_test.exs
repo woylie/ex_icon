@@ -191,10 +191,70 @@ defmodule ExIcon.SVGTest do
                SVG.parse(~s|<svg xmlns="x"><path style="fill:#000" /></svg>|)
     end
 
+    test "keeps a style that uses a known function" do
+      assert {:ok, {_, ~s|<path style="fill:rgb(0, 0, 0)" />|}} =
+               SVG.parse(
+                 ~s|<svg xmlns="x"><path style="fill:rgb(0, 0, 0)" /></svg>|
+               )
+    end
+
+    # clip-path takes a shape function, the likeliest legitimate use
+    test "keeps a style that uses a shape, timing or maths function" do
+      for value <- [
+            "clip-path:inset(10px)",
+            "clip-path:polygon(0 0, 1px 1px)",
+            "transition:all .2s cubic-bezier(0, 0, 1, 1)",
+            "width:round(1.5px)"
+          ] do
+        assert {:ok, _} =
+                 SVG.parse(~s|<svg xmlns="x"><path style="#{value}" /></svg>|)
+      end
+    end
+
     test "rejects a style that loads a resource" do
       assert SVG.parse(
                ~s|<svg xmlns="x"><path style="background:URL(https://x/t)" /></svg>|
-             ) == {:error, "style may not load a resource"}
+             ) == {:error, "the url() function is not allowed"}
+    end
+
+    # a blocklist for url( misses these, which fetch just the same
+    test "rejects a style that loads a resource with another function" do
+      for function <- ~w(image-set src cross-fade image paint element attr) do
+        assert SVG.parse(
+                 ~s|<svg xmlns="x"><path style="mask-image:#{function}('https://x/t')" /></svg>|
+               ) == {:error, "the #{function}() function is not allowed"}
+      end
+    end
+
+    # CSS unescapes \75 rl( to url( before it resolves the function
+    test "rejects a style that hides a function behind an escape" do
+      assert SVG.parse(
+               ~s|<svg xmlns="x"><path style="mask-image:\\75 rl(https://x/t)" /></svg>|
+             ) == {:error, "style may not contain a backslash"}
+    end
+
+    test "keeps a paint attribute that points into the same file" do
+      assert {:ok, {_, ~s|<path fill="url(#gradient)" />|}} =
+               SVG.parse(
+                 ~s|<svg xmlns="x"><path fill="url(#gradient)" /></svg>|
+               )
+    end
+
+    test "rejects a paint attribute that points at another document" do
+      for attribute <- ~w(clip-path fill mask stroke) do
+        assert SVG.parse(
+                 ~s|<svg xmlns="x"><path #{attribute}="url(https://x/t.svg#a)" /></svg>|
+               ) == {:error, "#{attribute} may only point into the same file"}
+      end
+    end
+
+    test "checks a value whatever the case of its attribute name" do
+      for attribute <- ~w(STYLE Style FILL Stroke CLIP-PATH XLINK:HREF HREF) do
+        assert {:error, _} =
+                 SVG.parse(
+                   ~s|<svg xmlns="x"><path #{attribute}="url(https://x/t)" /></svg>|
+                 )
+      end
     end
 
     test "keeps font attributes" do
@@ -255,6 +315,51 @@ defmodule ExIcon.SVGTest do
 
     test "rejects text that is not an element" do
       assert SVG.parse("not an svg") == {:error, "expected an element"}
+    end
+
+    test "rejects a control character in text" do
+      assert SVG.parse(~s|<svg xmlns="x"><title>a\eb</title></svg>|) ==
+               {:error, "the character U+001B is not allowed in an icon"}
+    end
+
+    test "rejects a control character in an attribute value" do
+      assert SVG.parse(~s|<svg xmlns="x"><path d="a\0b" /></svg>|) ==
+               {:error, "the character U+0000 is not allowed in an icon"}
+    end
+
+    # a reference to one of these is refused, so the character itself has to be
+    test "gives a raw character and a reference to it the same verdict" do
+      for {number, reference} <- [{0x1B, "&#x1B;"}, {0x202E, "&#x202E;"}] do
+        raw = <<number::utf8>>
+
+        assert {:error, _} =
+                 SVG.parse(~s|<svg xmlns="x"><title>#{raw}</title></svg>|)
+
+        assert {:error, _} =
+                 SVG.parse(~s|<svg xmlns="x"><title>#{reference}</title></svg>|)
+      end
+    end
+
+    # RLO, ZWSP, SHY, PDI, and a byte order mark that is not at the start
+    test "rejects an invisible character" do
+      for number <- [0x202E, 0x200B, 0xAD, 0x2069, 0xFEFF] do
+        invisible = <<number::utf8>>
+
+        assert {:error, "the character U+" <> _} =
+                 SVG.parse(
+                   ~s|<svg xmlns="x"><title>a#{invisible}b</title></svg>|
+                 )
+      end
+    end
+
+    test "rejects malformed utf8" do
+      assert SVG.parse(<<"<svg xmlns=\"x\"><title>", 0xFF, "</title></svg>">>) ==
+               {:error, "malformed character"}
+    end
+
+    test "turns a CRLF and a lone CR into a LF" do
+      assert {:ok, {_, "<title>a\nb\nc</title>"}} =
+               SVG.parse(~s|<svg xmlns="x"><title>a\r\nb\rc</title></svg>|)
     end
   end
 end

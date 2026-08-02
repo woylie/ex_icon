@@ -20,7 +20,7 @@ Add `ex_icon` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ex_icon, "~> 0.4.0", only: :dev}
+    {:ex_icon, "~> 0.5.0", only: :dev}
   ]
 end
 ```
@@ -85,7 +85,8 @@ Run `mix help ex_icon.gen.icons` for the available command line arguments.
 Each function component is named after its SVG file in snake case, so
 `arrow-left.svg` becomes `arrow_left`. Names that start with a digit get an
 `icon_` prefix, since HEEx does not accept component names that start with a
-digit. `1password.svg` becomes `icon_1password`.
+digit. `1password.svg` becomes `icon_1password`. Names that are reserved words
+in Elixir get the same prefix, so `end.svg` becomes `icon_end`.
 
 Icons with names that cannot be turned into function names are skipped and
 reported. If you listed such an icon in your configuration, the task fails
@@ -98,9 +99,10 @@ anything else, such as a `script` element or an `onclick` attribute, ExIcon
 skips the icon and prints the reason. If you listed such an icon in your
 configuration, the task fails instead.
 
-Attributes that load another document are not allowed. `href` and `xlink:href`
-may only point at an ID in the same file, and a `style` attribute may not
-contain `url()`.
+Attributes that load another document are not allowed. `href`, `xlink:href`, and
+`url()` references in `clip-path`, `color`, `fill`, `mask`, `stop-color` and
+`stroke` may only point at an ID in the same file. A `style` attribute may only
+use known CSS functions, and may not contain a backslash.
 
 ExIcon removes `metadata` elements and elements with a namespace prefix other
 than `svg`. Such elements are commonly added by editors like Inkscape.

@@ -349,7 +349,7 @@ defmodule ExIcon.SourceTest do
     end
 
     test "raises if the archive is not a zip file", %{tmp_dir: tmp_dir} do
-      assert_raise RuntimeError, ~r/Unable to unpack zip archive/, fn ->
+      assert_raise RuntimeError, ~r/Unable to read zip archive/, fn ->
         ExIcon.Source.unpack_archive!("not a zip archive", tmp_dir)
       end
     end
@@ -417,12 +417,10 @@ defmodule ExIcon.SourceTest do
       assert File.stat!(Path.join(target, "icons")).mode == 0o40755
     end
 
-    @tag :capture_log
-    test "keeps traversing entries inside the target folder", %{
-      tmp_dir: tmp_dir
-    } do
+    test "refuses entries that escape the target folder", %{tmp_dir: tmp_dir} do
       zip =
         build_zip([
+          {~c"icons/arrow-left.svg", "<svg></svg>"},
           {~c"../escaped.svg", "<svg></svg>"},
           {~c"icons/../../escaped-too.svg", "<svg></svg>"},
           {~c"./../escaped-again.svg", "<svg></svg>"}
@@ -431,24 +429,80 @@ defmodule ExIcon.SourceTest do
       target = Path.join(tmp_dir, "target")
       File.mkdir_p!(target)
 
-      assert ExIcon.Source.unpack_archive!(zip, target) == :ok
+      assert_raise RuntimeError, ~r/would be written outside/, fn ->
+        ExIcon.Source.unpack_archive!(zip, target)
+      end
 
-      assert Enum.sort(File.ls!(target)) ==
-               ["escaped-again.svg", "escaped-too.svg", "escaped.svg"]
-
+      assert File.ls!(target) == []
       assert File.ls!(tmp_dir) == ["target"]
     end
 
-    @tag :capture_log
-    test "keeps absolute entries inside the target folder", %{tmp_dir: tmp_dir} do
+    test "refuses entries that climb back down after escaping", %{
+      tmp_dir: tmp_dir
+    } do
+      zip =
+        build_zip([
+          {~c"../evil/payload.exs", "# escaped"},
+          {~c"../../other_provider/1.0.0/poisoned.svg", "<svg></svg>"}
+        ])
+
+      target = Path.join([tmp_dir, "cache", "provider", "1.0.0.download-1"])
+      File.mkdir_p!(target)
+
+      assert_raise RuntimeError, ~r/would be written outside/, fn ->
+        ExIcon.Source.unpack_archive!(zip, target)
+      end
+
+      assert File.ls!(target) == []
+
+      assert File.ls!(Path.join([tmp_dir, "cache", "provider"])) ==
+               ["1.0.0.download-1"]
+
+      assert File.ls!(Path.join(tmp_dir, "cache")) == ["provider"]
+    end
+
+    test "refuses an entry the central directory names differently", %{
+      tmp_dir: tmp_dir
+    } do
+      zip = build_zip_with_mismatched_name()
+      target = Path.join([tmp_dir, "cache", "target"])
+      File.mkdir_p!(target)
+
+      assert {:ok, [_comment, {:zip_file, ~c"icons/aaaaaa.svg", _, _, _, _}]} =
+               :zip.list_dir(zip)
+
+      assert_raise RuntimeError, ~r/would be written outside/, fn ->
+        ExIcon.Source.unpack_archive!(zip, target)
+      end
+
+      assert File.ls!(target) == []
+      assert File.ls!(Path.join(tmp_dir, "cache")) == ["target"]
+    end
+
+    test "refuses an archive whose local file header is missing", %{
+      tmp_dir: tmp_dir
+    } do
+      zip = build_zip_without_local_header()
+      target = Path.join(tmp_dir, "target")
+      File.mkdir_p!(target)
+
+      assert_raise RuntimeError, ~r/no local file header/, fn ->
+        ExIcon.Source.unpack_archive!(zip, target)
+      end
+
+      assert File.ls!(target) == []
+    end
+
+    test "refuses entries with an absolute path", %{tmp_dir: tmp_dir} do
       zip = build_zip_with_absolute_entry()
       target = Path.join(tmp_dir, "target")
       File.mkdir_p!(target)
 
-      assert ExIcon.Source.unpack_archive!(zip, target) == :ok
+      assert_raise RuntimeError, ~r/would be written outside/, fn ->
+        ExIcon.Source.unpack_archive!(zip, target)
+      end
 
-      assert File.exists?(Path.join([target, "abs", "escaped.svg"]))
-      assert File.ls!(tmp_dir) == ["target"]
+      assert File.ls!(target) == []
     end
   end
 
@@ -465,6 +519,35 @@ defmodule ExIcon.SourceTest do
     binary_part(zip, 0, offset) <>
       <<100::little-32>> <>
       binary_part(zip, offset + 4, byte_size(zip) - offset - 4)
+  end
+
+  # the central directory of every entry points at its local file header
+  defp build_zip_without_local_header do
+    zip = build_zip([{~c"icons/arrow-left.svg", "<svg></svg>"}])
+    {position, length} = :binary.match(zip, <<0x50, 0x4B, 0x03, 0x04>>)
+
+    binary_part(zip, 0, position) <>
+      <<0, 0, 0, 0>> <>
+      binary_part(zip, position + length, byte_size(zip) - position - length)
+  end
+
+  # only the local file header decides where the file is written; the two names
+  # are the same length to keep the offsets in the archive valid
+  defp build_zip_with_mismatched_name do
+    benign = "icons/aaaaaa.svg"
+    evil = "../evil/xxxx.svg"
+
+    zip = build_zip([{String.to_charlist(benign), "<svg></svg>"}])
+    {position, _length} = :binary.match(zip, <<0x50, 0x4B, 0x03, 0x04>>)
+    offset = position + 30
+
+    binary_part(zip, 0, offset) <>
+      evil <>
+      binary_part(
+        zip,
+        offset + byte_size(benign),
+        byte_size(zip) - offset - byte_size(benign)
+      )
   end
 
   defp build_zip_with_absolute_entry do
