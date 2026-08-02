@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Security
+
+- Refuse release archives with entries that would be written outside the target
+  folder.
+- Check the name a zip entry carries in its local file header, not only the one
+  in the central directory.
+- Refuse a release archive whose entries cannot be listed, instead of unpacking
+  it unchecked.
+
 ## [0.4.0] - 2026-08-01
 
 ### Added
