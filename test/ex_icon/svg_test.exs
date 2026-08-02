@@ -198,6 +198,19 @@ defmodule ExIcon.SVGTest do
                )
     end
 
+    # clip-path takes a shape function, the likeliest legitimate use
+    test "keeps a style that uses a shape, timing or maths function" do
+      for value <- [
+            "clip-path:inset(10px)",
+            "clip-path:polygon(0 0, 1px 1px)",
+            "transition:all .2s cubic-bezier(0, 0, 1, 1)",
+            "width:round(1.5px)"
+          ] do
+        assert {:ok, _} =
+                 SVG.parse(~s|<svg xmlns="x"><path style="#{value}" /></svg>|)
+      end
+    end
+
     test "rejects a style that loads a resource" do
       assert SVG.parse(
                ~s|<svg xmlns="x"><path style="background:URL(https://x/t)" /></svg>|
@@ -206,7 +219,7 @@ defmodule ExIcon.SVGTest do
 
     # a blocklist for url( misses these, which fetch just the same
     test "rejects a style that loads a resource with another function" do
-      for function <- ~w(image-set src cross-fade image) do
+      for function <- ~w(image-set src cross-fade image paint element attr) do
         assert SVG.parse(
                  ~s|<svg xmlns="x"><path style="mask-image:#{function}('https://x/t')" /></svg>|
                ) == {:error, "the #{function}() function is not allowed"}

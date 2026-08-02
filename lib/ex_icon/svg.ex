@@ -29,15 +29,18 @@ defmodule ExIcon.SVG do
   @funciri_attributes ~w(clip-path color fill mask stop-color stroke)
 
   # functions an icon may use in a style or paint value; a blocklist would miss
-  # image-set(), src() and every future CSS function that fetches a resource
+  # image-set(), src() and every future CSS function that fetches a resource.
+  # attr() is left out because it can be typed to produce a url()
   @functions ~w(
-    blur brightness calc clamp color color-mix conic-gradient contrast
-    drop-shadow grayscale hsl hsla hue-rotate hwb invert lab lch
-    linear-gradient matrix matrix3d max min oklab oklch opacity perspective
-    radial-gradient repeating-conic-gradient repeating-linear-gradient
-    repeating-radial-gradient rgb rgba rotate rotate3d rotateX rotateY rotateZ
-    saturate scale scale3d scaleX scaleY scaleZ sepia skew skewX skewY
-    translate translate3d translateX translateY translateZ var
+    abs acos asin atan atan2 blur brightness calc circle clamp color color-mix
+    conic-gradient contrast cos cubic-bezier drop-shadow ellipse exp grayscale
+    hsl hsla hue-rotate hwb hypot inset invert lab lch linear linear-gradient
+    log matrix matrix3d max min mod oklab oklch opacity path perspective
+    polygon pow radial-gradient rect rem repeating-conic-gradient
+    repeating-linear-gradient repeating-radial-gradient rgb rgba rotate
+    rotate3d rotateX rotateY rotateZ round saturate scale scale3d scaleX
+    scaleY scaleZ sepia sign sin skew skewX skewY sqrt steps tan translate
+    translate3d translateX translateY translateZ var xywh
   )
 
   @downcased_elements Enum.map(@elements, &String.downcase/1)
