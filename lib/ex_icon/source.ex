@@ -116,8 +116,9 @@ defmodule ExIcon.Source do
     end
   end
 
-  # a release is fetched over https, except from the local machine, so that a
-  # provider can be developed against a local server
+  # the URL a provider returns has to be https, except on the local machine, so
+  # that a provider can be developed against a local server; redirects are
+  # followed without being checked again
   @loopback_hosts ~w(localhost 127.0.0.1 ::1 [::1])
 
   defp validate_url!(url, provider) do
