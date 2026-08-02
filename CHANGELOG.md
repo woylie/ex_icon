@@ -6,6 +6,7 @@
 
 - Check the generated module before formatting it, so that an icon which does
   not produce valid code is reported instead of raising in the formatter.
+- Turn a CRLF and a lone CR in an icon into a LF, as XML requires.
 
 ### Security
 
@@ -19,6 +20,10 @@
   contain a backslash.
 - Only allow `clip-path`, `color`, `fill`, `mask`, `stop-color` and `stroke`
   values that point into the same file.
+- Hold a character written into an icon to the same rule as a reference to it,
+  which was only applied to references before.
+- Reject control characters and invisible characters such as a bidirectional
+  override.
 
 ## [0.4.0] - 2026-08-01
 

@@ -294,5 +294,50 @@ defmodule ExIcon.SVGTest do
     test "rejects text that is not an element" do
       assert SVG.parse("not an svg") == {:error, "expected an element"}
     end
+
+    test "rejects a control character in text" do
+      assert SVG.parse(~s|<svg xmlns="x"><title>a\eb</title></svg>|) ==
+               {:error, "the character U+001B is not allowed in an icon"}
+    end
+
+    test "rejects a control character in an attribute value" do
+      assert SVG.parse(~s|<svg xmlns="x"><path d="a\0b" /></svg>|) ==
+               {:error, "the character U+0000 is not allowed in an icon"}
+    end
+
+    # a reference to one of these is refused, so the character itself has to be
+    test "gives a raw character and a reference to it the same verdict" do
+      for {number, reference} <- [{0x1B, "&#x1B;"}, {0x202E, "&#x202E;"}] do
+        raw = <<number::utf8>>
+
+        assert {:error, _} =
+                 SVG.parse(~s|<svg xmlns="x"><title>#{raw}</title></svg>|)
+
+        assert {:error, _} =
+                 SVG.parse(~s|<svg xmlns="x"><title>#{reference}</title></svg>|)
+      end
+    end
+
+    # RLO, ZWSP, SHY, PDI, and a byte order mark that is not at the start
+    test "rejects an invisible character" do
+      for number <- [0x202E, 0x200B, 0xAD, 0x2069, 0xFEFF] do
+        invisible = <<number::utf8>>
+
+        assert {:error, "the character U+" <> _} =
+                 SVG.parse(
+                   ~s|<svg xmlns="x"><title>a#{invisible}b</title></svg>|
+                 )
+      end
+    end
+
+    test "rejects malformed utf8" do
+      assert SVG.parse(<<"<svg xmlns=\"x\"><title>", 0xFF, "</title></svg>">>) ==
+               {:error, "malformed character"}
+    end
+
+    test "turns a CRLF and a lone CR into a LF" do
+      assert {:ok, {_, "<title>a\nb\nc</title>"}} =
+               SVG.parse(~s|<svg xmlns="x"><title>a\r\nb\rc</title></svg>|)
+    end
   end
 end

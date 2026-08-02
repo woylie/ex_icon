@@ -60,13 +60,22 @@ defmodule ExIcon.SVG do
   """
   @spec parse(binary) :: {:ok, {[{binary, binary}], binary}} | {:error, binary}
   def parse(svg) when is_binary(svg) do
-    with {:ok, start} <- svg |> String.trim_leading("\uFEFF") |> prologue(),
+    with {:ok, start} <- svg |> normalize() |> prologue(),
          {:ok, root_node, rest} <- element_node(start, false),
          {:ok, {attrs, children}} <- root(root_node),
          :ok <- eof(rest) do
       {:ok,
        {attrs, children |> Enum.map(&serialize/1) |> IO.iodata_to_binary()}}
     end
+  end
+
+  # a byte order mark is dropped and, as XML requires, a CRLF or a lone CR
+  # becomes a LF
+  defp normalize(svg) do
+    svg
+    |> String.trim_leading("﻿")
+    |> String.replace("\r\n", "\n")
+    |> String.replace("\r", "\n")
   end
 
   # skip xml declarations, doctypes and comments (commonly added by design
@@ -354,7 +363,9 @@ defmodule ExIcon.SVG do
         decode(rest, [text | acc])
 
       :nomatch ->
-        {:ok, IO.iodata_to_binary([Enum.reverse(acc), binary])}
+        decoded = IO.iodata_to_binary([Enum.reverse(acc), binary])
+
+        with :ok <- allowed_characters(decoded), do: {:ok, decoded}
     end
   end
 
@@ -368,14 +379,39 @@ defmodule ExIcon.SVG do
 
   # the characters XML allows; without the check, a reference to a surrogate
   # would raise instead of skipping the icon
+  defguardp xml_character?(number)
+            when number in [0x9, 0xA, 0xD] or
+                   number in 0x20..0xD7FF or
+                   number in 0xE000..0xFFFD or
+                   number in 0x10000..0x10FFFF
+
+  # XML 1.0 allows these, but a control character has no place in an icon, and
+  # an invisible one can hide or reorder what a reader of the generated module
+  # sees
+  defguardp invisible?(number)
+            when number in 0x7F..0x9F or number in [0xAD, 0xFEFF] or
+                   number in 0x200B..0x200F or number in 0x2028..0x2029 or
+                   number in 0x202A..0x202E or number in 0x2066..0x2069
+
   defp codepoint(number)
-       when number in [0x9, 0xA, 0xD] or
-              number in 0x20..0xD7FF or
-              number in 0xE000..0xFFFD or
-              number in 0x10000..0x10FFFF,
+       when xml_character?(number) and not invisible?(number),
        do: {:ok, <<number::utf8>>}
 
   defp codepoint(_number), do: :error
+
+  # a character written into the file is held to the same rule as a reference
+  defp allowed_characters(<<>>), do: :ok
+
+  defp allowed_characters(<<number::utf8, rest::binary>>)
+       when xml_character?(number) and not invisible?(number),
+       do: allowed_characters(rest)
+
+  defp allowed_characters(<<number::utf8, _rest::binary>>) do
+    hex = number |> Integer.to_string(16) |> String.pad_leading(4, "0")
+    {:error, "the character U+#{hex} is not allowed in an icon"}
+  end
+
+  defp allowed_characters(_binary), do: {:error, "malformed character"}
 
   defp serialize({:text, text}), do: escape_text(text)
 
