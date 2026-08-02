@@ -235,6 +235,15 @@ defmodule ExIcon.SVGTest do
       end
     end
 
+    test "checks a value whatever the case of its attribute name" do
+      for attribute <- ~w(STYLE Style FILL Stroke CLIP-PATH XLINK:HREF HREF) do
+        assert {:error, _} =
+                 SVG.parse(
+                   ~s|<svg xmlns="x"><path #{attribute}="url(https://x/t)" /></svg>|
+                 )
+      end
+    end
+
     test "keeps font attributes" do
       svg =
         ~s|<svg xmlns="x"><text font-size="12" text-anchor="middle">A</text></svg>|
