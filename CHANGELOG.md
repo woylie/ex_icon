@@ -10,6 +10,10 @@
   in the central directory.
 - Refuse a release archive whose entries cannot be listed, instead of unpacking
   it unchecked.
+- Only allow known CSS functions in a `style` value, and reject values that
+  contain a backslash.
+- Only allow `clip-path`, `color`, `fill`, `mask`, `stop-color` and `stroke`
+  values that point into the same file.
 
 ## [0.4.0] - 2026-08-01
 

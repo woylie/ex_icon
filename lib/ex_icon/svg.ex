@@ -25,8 +25,27 @@ defmodule ExIcon.SVG do
   # attributes that can load other documents
   @references ~w(href xlink:href)
 
+  # attributes whose value can reference another document with url()
+  @funciri_attributes ~w(clip-path color fill mask stop-color stroke)
+
+  # functions an icon may use in a style or paint value; a blocklist would miss
+  # image-set(), src() and every future CSS function that fetches a resource
+  @functions ~w(
+    blur brightness calc clamp color color-mix conic-gradient contrast
+    drop-shadow grayscale hsl hsla hue-rotate hwb invert lab lch
+    linear-gradient matrix matrix3d max min oklab oklch opacity perspective
+    radial-gradient repeating-conic-gradient repeating-linear-gradient
+    repeating-radial-gradient rgb rgba rotate rotate3d rotateX rotateY rotateZ
+    saturate scale scale3d scaleX scaleY scaleZ sepia skew skewX skewY
+    translate translate3d translateX translateY translateZ var
+  )
+
   @downcased_elements Enum.map(@elements, &String.downcase/1)
   @downcased_attributes Enum.map(@attributes, &String.downcase/1)
+  @downcased_functions Enum.map(@functions, &String.downcase/1)
+
+  @function_regex ~r/([a-zA-Z][a-zA-Z0-9-]*)\s*\(/
+  @url_regex ~r/url\s*\(\s*['"]?([^'")]*)/i
 
   @attribute_regex ~r/^([a-zA-Z_:][a-zA-Z0-9:_.-]*)\s*=\s*("[^"]*"|'[^']*')/s
   @entity_regex ~r/^(#x[0-9a-fA-F]+|#[0-9]+|amp|lt|gt|quot|apos);/
@@ -222,17 +241,58 @@ defmodule ExIcon.SVG do
   defp allowed_value(name, value) do
     case String.downcase(name) do
       reference when reference in @references ->
-        if String.starts_with?(value, "#"),
-          do: :ok,
-          else: {:error, "#{name} may only point into the same file"}
+        same_file(name, value)
 
       "style" ->
-        if String.contains?(String.downcase(value), "url("),
-          do: {:error, "style may not load a resource"},
-          else: :ok
+        allowed_functions(name, value, @downcased_functions)
+
+      funciri when funciri in @funciri_attributes ->
+        allowed_functions(name, value, ["url" | @downcased_functions])
 
       _name ->
         :ok
+    end
+  end
+
+  defp same_file(name, value) do
+    if String.starts_with?(value, "#"),
+      do: :ok,
+      else: {:error, "#{name} may only point into the same file"}
+  end
+
+  defp allowed_functions(name, value, allowed) do
+    with :ok <- refuse_escapes(name, value),
+         :ok <- refuse_unknown_functions(value, allowed) do
+      refuse_external_url(name, value)
+    end
+  end
+
+  # a CSS escape can spell url( as \75 rl(, so a value that needs one is refused
+  # rather than unescaped
+  defp refuse_escapes(name, value) do
+    if String.contains?(value, "\\"),
+      do: {:error, "#{name} may not contain a backslash"},
+      else: :ok
+  end
+
+  defp refuse_unknown_functions(value, allowed) do
+    @function_regex
+    |> Regex.scan(value, capture: :all_but_first)
+    |> Enum.map(fn [function] -> String.downcase(function) end)
+    |> Enum.find(&(&1 not in allowed))
+    |> case do
+      nil -> :ok
+      function -> {:error, "the #{function}() function is not allowed"}
+    end
+  end
+
+  defp refuse_external_url(name, value) do
+    @url_regex
+    |> Regex.scan(value, capture: :all_but_first)
+    |> Enum.all?(fn [target] -> String.starts_with?(target, "#") end)
+    |> case do
+      true -> :ok
+      false -> {:error, "#{name} may only point into the same file"}
     end
   end
 

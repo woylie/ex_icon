@@ -191,10 +191,48 @@ defmodule ExIcon.SVGTest do
                SVG.parse(~s|<svg xmlns="x"><path style="fill:#000" /></svg>|)
     end
 
+    test "keeps a style that uses a known function" do
+      assert {:ok, {_, ~s|<path style="fill:rgb(0, 0, 0)" />|}} =
+               SVG.parse(
+                 ~s|<svg xmlns="x"><path style="fill:rgb(0, 0, 0)" /></svg>|
+               )
+    end
+
     test "rejects a style that loads a resource" do
       assert SVG.parse(
                ~s|<svg xmlns="x"><path style="background:URL(https://x/t)" /></svg>|
-             ) == {:error, "style may not load a resource"}
+             ) == {:error, "the url() function is not allowed"}
+    end
+
+    # a blocklist for url( misses these, which fetch just the same
+    test "rejects a style that loads a resource with another function" do
+      for function <- ~w(image-set src cross-fade image) do
+        assert SVG.parse(
+                 ~s|<svg xmlns="x"><path style="mask-image:#{function}('https://x/t')" /></svg>|
+               ) == {:error, "the #{function}() function is not allowed"}
+      end
+    end
+
+    # CSS unescapes \75 rl( to url( before it resolves the function
+    test "rejects a style that hides a function behind an escape" do
+      assert SVG.parse(
+               ~s|<svg xmlns="x"><path style="mask-image:\\75 rl(https://x/t)" /></svg>|
+             ) == {:error, "style may not contain a backslash"}
+    end
+
+    test "keeps a paint attribute that points into the same file" do
+      assert {:ok, {_, ~s|<path fill="url(#gradient)" />|}} =
+               SVG.parse(
+                 ~s|<svg xmlns="x"><path fill="url(#gradient)" /></svg>|
+               )
+    end
+
+    test "rejects a paint attribute that points at another document" do
+      for attribute <- ~w(clip-path fill mask stroke) do
+        assert SVG.parse(
+                 ~s|<svg xmlns="x"><path #{attribute}="url(https://x/t.svg#a)" /></svg>|
+               ) == {:error, "#{attribute} may only point into the same file"}
+      end
     end
 
     test "keeps font attributes" do

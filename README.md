@@ -98,9 +98,10 @@ anything else, such as a `script` element or an `onclick` attribute, ExIcon
 skips the icon and prints the reason. If you listed such an icon in your
 configuration, the task fails instead.
 
-Attributes that load another document are not allowed. `href` and `xlink:href`
-may only point at an ID in the same file, and a `style` attribute may not
-contain `url()`.
+Attributes that load another document are not allowed. `href`, `xlink:href`, and
+`url()` references in `clip-path`, `color`, `fill`, `mask`, `stop-color` and
+`stroke` may only point at an ID in the same file. A `style` attribute may only
+use known CSS functions, and may not contain a backslash.
 
 ExIcon removes `metadata` elements and elements with a namespace prefix other
 than `svg`. Such elements are commonly added by editors like Inkscape.
