@@ -43,8 +43,9 @@ defmodule ExIcon.SVG do
     translate3d translateX translateY translateZ var xywh
   )
 
-  @downcased_elements Enum.map(@elements, &String.downcase/1)
-  @downcased_attributes Enum.map(@attributes, &String.downcase/1)
+  @canonical_elements Map.new(@elements, &{String.downcase(&1), &1})
+  @canonical_attributes Map.new(@attributes, &{String.downcase(&1), &1})
+
   @downcased_functions Enum.map(@functions, &String.downcase/1)
 
   @function_regex ~r/([a-zA-Z][a-zA-Z0-9-]*)\s*\(/
@@ -142,9 +143,9 @@ defmodule ExIcon.SVG do
     with {:ok, raw_name, rest} <- name(rest),
          {name, drop?} = element_policy(raw_name, drop?),
          {:ok, attrs, rest, closed?} <- attributes(rest, [], drop?),
-         :ok <- allowed_element(name, drop?),
+         {:ok, canonical} <- allowed_element(name, drop?),
          {:ok, node, rest} <- subtree(rest, name, attrs, closed?, drop?) do
-      {:ok, keep(node, drop?), rest}
+      {:ok, node |> rename(canonical) |> keep(drop?), rest}
     end
   end
 
@@ -165,6 +166,9 @@ defmodule ExIcon.SVG do
       [_name] -> {name, String.downcase(name) in @dropped_elements}
     end
   end
+
+  defp rename({_name, attrs, children}, canonical),
+    do: {canonical, attrs, children}
 
   defp keep(_node, true), do: nil
   defp keep(node, false), do: node
@@ -239,10 +243,10 @@ defmodule ExIcon.SVG do
         {:ok, name, "", chop(binary, match)}
 
       [match, name, quoted] ->
-        with :ok <- allowed_attribute(name),
+        with {:ok, canonical} <- allowed_attribute(name),
              {:ok, value} <- decode(unquote_value(quoted), []),
              :ok <- allowed_value(name, value) do
-          {:ok, name, value, chop(binary, match)}
+          {:ok, canonical, value, chop(binary, match)}
         end
 
       nil ->
@@ -308,20 +312,27 @@ defmodule ExIcon.SVG do
     end
   end
 
-  defp allowed_element(_name, true), do: :ok
+  defp allowed_element(name, true), do: {:ok, name}
 
   defp allowed_element(name, false) do
-    if String.downcase(name) in @downcased_elements,
-      do: :ok,
-      else: {:error, "the <#{name}> element is not allowed in an icon"}
+    case Map.fetch(@canonical_elements, String.downcase(name)) do
+      {:ok, canonical} -> {:ok, canonical}
+      :error -> {:error, "the <#{name}> element is not allowed in an icon"}
+    end
   end
 
   defp allowed_attribute(name) do
     downcased = String.downcase(name)
 
-    if downcased in @downcased_attributes or prefixed?(downcased),
-      do: :ok,
-      else: {:error, "the #{name} attribute is not allowed in an icon"}
+    case Map.fetch(@canonical_attributes, downcased) do
+      {:ok, canonical} ->
+        {:ok, canonical}
+
+      :error ->
+        if prefixed?(downcased),
+          do: {:ok, downcased},
+          else: {:error, "the #{name} attribute is not allowed in an icon"}
+    end
   end
 
   defp prefixed?("data-" <> rest), do: rest != ""

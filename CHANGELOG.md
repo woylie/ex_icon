@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- Use canonical casing for SVG element and attribute names.
+
 ## [0.5.0] - 2026-08-02
 
 ### Fixed
