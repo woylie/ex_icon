@@ -5,6 +5,7 @@
 ### Changed
 
 - Use `Mix.raise/1` for exceptions.
+- Increase TLS depth to 3.
 
 ### Fixed
 
