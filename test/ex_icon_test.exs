@@ -52,6 +52,24 @@ defmodule ExIconTest do
       assert {:error, %NimbleOptions.ValidationError{}} =
                ExIcon.read_config(path)
     end
+
+    test "returns error with the path if the file does not parse", %{
+      tmp_dir: tmp_dir
+    } do
+      path = Path.join(tmp_dir, ".ex_icon.exs")
+      File.write!(path, "[icon_sets: [")
+
+      assert {:error, %TokenMissingError{} = error} = ExIcon.read_config(path)
+      assert Exception.message(error) =~ Path.relative_to_cwd(path)
+    end
+
+    test "returns error if the file raises", %{tmp_dir: tmp_dir} do
+      path = Path.join(tmp_dir, ".ex_icon.exs")
+      File.write!(path, ~s|raise "boom"|)
+
+      assert ExIcon.read_config(path) ==
+               {:error, %RuntimeError{message: "boom"}}
+    end
   end
 
   describe "validate_config/1" do

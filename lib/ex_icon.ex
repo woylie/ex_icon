@@ -291,10 +291,17 @@ defmodule ExIcon do
 
   @doc false
   def read_config(path) when is_binary(path) do
-    with {:ok, file} <- File.read(path) do
-      {config, _} = Code.eval_string(file)
+    with {:ok, file} <- File.read(path),
+         {:ok, config} <- eval_config(file, path) do
       validate_config(config)
     end
+  end
+
+  defp eval_config(file, path) do
+    {config, _binding} = Code.eval_string(file, [], file: path)
+    {:ok, config}
+  rescue
+    error -> {:error, error}
   end
 
   @doc false

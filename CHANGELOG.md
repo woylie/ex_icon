@@ -6,6 +6,8 @@
 
 - Use canonical casing for SVG element and attribute names.
 - Validate `module_name` in configuration.
+- Report the path and the line of the configuration file when it does not
+  parse.
 
 ## [0.5.0] - 2026-08-02
 
