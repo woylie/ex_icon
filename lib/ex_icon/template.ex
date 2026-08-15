@@ -41,8 +41,9 @@ defmodule ExIcon.Template do
     error -> {:syntax_error, Exception.message(error)}
   end
 
+  @spec refuse_syntax_error!(binary) :: no_return()
   defp refuse_syntax_error!(message) do
-    raise """
+    Mix.raise("""
     Refusing to write the generated module
 
     The generated code is not valid Elixir:
@@ -50,7 +51,7 @@ defmodule ExIcon.Template do
         #{message}
 
     An icon whose name cannot be used as a function name can cause this.
-    """
+    """)
   end
 
   defp refuse_unexpected! do

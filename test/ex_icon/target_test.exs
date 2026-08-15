@@ -36,7 +36,7 @@ defmodule ExIcon.TargetTest do
     end
 
     test "raises for an unknown variant" do
-      assert_raise ArgumentError, ~r/unknown variant :outlined/, fn ->
+      assert_raise Mix.Error, ~r/unknown variant :outlined/, fn ->
         ExIcon.Target.targets(
           icons: :all,
           provider: ExIcon.Providers.Heroicons,
@@ -49,7 +49,7 @@ defmodule ExIcon.TargetTest do
     end
 
     test "raises if the provider cannot be loaded" do
-      assert_raise ArgumentError, ~r/could not load the provider/, fn ->
+      assert_raise Mix.Error, ~r/could not load the provider/, fn ->
         ExIcon.Target.targets(
           icons: :all,
           provider: NoSuchProvider,
@@ -70,7 +70,7 @@ defmodule ExIcon.TargetTest do
     end
 
     test "raises if the path of an icon set is not a folder" do
-      assert_raise ArgumentError, ~r/is not a folder/, fn ->
+      assert_raise Mix.Error, ~r/is not a folder/, fn ->
         ExIcon.Target.targets(
           icons: :all,
           path: "does/not/exist",
@@ -81,7 +81,7 @@ defmodule ExIcon.TargetTest do
     end
 
     test "raises if an icon set has no source" do
-      assert_raise ArgumentError, ~r/icon set without a source/, fn ->
+      assert_raise Mix.Error, ~r/icon set without a source/, fn ->
         ExIcon.Target.targets(
           icons: :all,
           module_path: "lib/components/icons.ex",
@@ -91,7 +91,7 @@ defmodule ExIcon.TargetTest do
     end
 
     test "raises if an icon set has both a path and a provider" do
-      assert_raise ArgumentError, ~r/icon set with two sources/, fn ->
+      assert_raise Mix.Error, ~r/icon set with two sources/, fn ->
         ExIcon.Target.targets(
           icons: :all,
           path: "assets/icons",
@@ -104,7 +104,7 @@ defmodule ExIcon.TargetTest do
     end
 
     test "raises if a provider is given without a version" do
-      assert_raise ArgumentError, ~r/icon set without a version/, fn ->
+      assert_raise Mix.Error, ~r/icon set without a version/, fn ->
         ExIcon.Target.targets(
           icons: :all,
           provider: ExIcon.Providers.Lucide,
@@ -115,7 +115,7 @@ defmodule ExIcon.TargetTest do
     end
 
     test "raises if an icon set with a path configures variants" do
-      assert_raise ArgumentError, ~r/variants are not supported/, fn ->
+      assert_raise Mix.Error, ~r/variants are not supported/, fn ->
         ExIcon.Target.targets(
           icons: :all,
           path: "assets/icons",
@@ -127,7 +127,7 @@ defmodule ExIcon.TargetTest do
     end
 
     test "raises if the provider has no variants" do
-      assert_raise ArgumentError,
+      assert_raise Mix.Error,
                    ~r/not supported by ExIcon.Providers.Lucide/,
                    fn ->
                      ExIcon.Target.targets(

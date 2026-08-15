@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- Use `Mix.raise/1` for exceptions.
+
 ### Fixed
 
 - Use canonical casing for SVG element and attribute names.

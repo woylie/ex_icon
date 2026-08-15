@@ -158,7 +158,7 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
         )
     )
 
-    assert_raise RuntimeError, ~r/unable to fetch icons/, fn ->
+    assert_raise Mix.Error, ~r/unable to fetch icons/, fn ->
       run(tmp_dir, ["--refresh"])
     end
   end
@@ -197,7 +197,7 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
       ]
     )
 
-    assert_raise ArgumentError, ~r/is not a folder/, fn -> run(tmp_dir) end
+    assert_raise Mix.Error, ~r/is not a folder/, fn -> run(tmp_dir) end
 
     refute File.exists?(Path.join(tmp_dir, "output/icons.ex"))
   end
@@ -213,7 +213,7 @@ defmodule Mix.Tasks.ExIcon.Gen.IconsTest do
         )
     )
 
-    assert_raise ArgumentError, ~r/could not load the provider/, fn ->
+    assert_raise Mix.Error, ~r/could not load the provider/, fn ->
       run(tmp_dir)
     end
 

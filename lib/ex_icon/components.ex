@@ -44,12 +44,12 @@ defmodule ExIcon.Components do
   # raise if icon listed in the configuration is missing
   defp ensure_nothing_missing!(wanted, icons)
        when length(wanted) != length(icons) do
-    raise ArgumentError, """
+    Mix.raise("""
     could not generate every configured icon
 
     #{length(icons)} of #{length(wanted)} icons were generated. See the messages
     above for the icons that were skipped and why.
-    """
+    """)
   end
 
   defp ensure_nothing_missing!(_wanted, _icons), do: :ok
@@ -95,7 +95,7 @@ defmodule ExIcon.Components do
       |> Enum.map(fn {name, _count} -> name end)
 
     if duplicates != [] do
-      raise ArgumentError, """
+      Mix.raise("""
       duplicate function names
 
       These function names are generated more than once:
@@ -103,7 +103,7 @@ defmodule ExIcon.Components do
 
       Remove the duplicate icons from the :icons option, or add one of them to
       the :exclude option.
-      """
+      """)
     end
 
     icons

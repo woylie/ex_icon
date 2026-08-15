@@ -41,12 +41,12 @@ defmodule ExIcon.Target do
     if Keyword.get(opts, :variants, []) == [] do
       :ok
     else
-      raise ArgumentError, """
+      Mix.raise("""
       variants are not supported for an icon set with a :path
 
       Variants are the style folders of a release. Configure one icon set per
       folder instead.
-      """
+      """)
     end
   end
 
@@ -54,11 +54,11 @@ defmodule ExIcon.Target do
     if Code.ensure_loaded?(provider) do
       :ok
     else
-      raise ArgumentError, """
+      Mix.raise("""
       could not load the provider #{inspect(provider)}
 
       Make sure the module exists and is compiled.
-      """
+      """)
     end
   end
 
@@ -66,12 +66,12 @@ defmodule ExIcon.Target do
     if function_exported?(provider, :variants, 1) do
       provider.variants(version)
     else
-      raise ArgumentError, """
+      Mix.raise("""
       the :variants option is not supported by #{inspect(provider)}
 
       Only providers that implement the optional variants/1 callback of the
       ExIcon.Provider behaviour have variants to choose from.
-      """
+      """)
     end
   end
 
@@ -81,11 +81,11 @@ defmodule ExIcon.Target do
         folder
 
       :error ->
-        raise ArgumentError, """
+        Mix.raise("""
         unknown variant #{inspect(variant)} for #{inspect(provider)}
 
         Available variants: #{inspect(Enum.sort(Map.keys(available)))}
-        """
+        """)
     end
   end
 

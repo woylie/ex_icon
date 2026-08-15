@@ -356,7 +356,7 @@ defmodule ExIcon.AttrsTest do
     test "raises if the value in the svg is not one of the given values" do
       svg = ~s(<svg stroke-linecap="butt"></svg>)
 
-      assert_raise ArgumentError,
+      assert_raise Mix.Error,
                    ~r/"butt" is not one of \["square", "round"\]/,
                    fn ->
                      transform_svg(svg, [

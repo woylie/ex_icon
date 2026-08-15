@@ -100,14 +100,14 @@ defmodule ExIcon.Attrs do
         values_opt ++ [default: value]
 
       true ->
-        raise ArgumentError, """
+        Mix.raise("""
         invalid default value for the #{inspect(name)} attribute
 
         The value #{inspect(value)} is not one of #{inspect(values)}.
 
         If it comes from an SVG file, either add it to the :values option, or
         set a :default that is one of them.
-        """
+        """)
     end
   end
 
