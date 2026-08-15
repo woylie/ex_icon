@@ -54,7 +54,8 @@ defmodule ExIcon do
       """
     ],
     module_name: [
-      type: :atom,
+      type: {:custom, __MODULE__, :validate_module_name, []},
+      type_doc: "`t:module/0`",
       required: true,
       doc:
         "The name of the generated module. Example: `MyApp.Components.Lucide`."
@@ -173,6 +174,15 @@ defmodule ExIcon do
   #{NimbleOptions.docs(@options_schema)}
   """
   @type options() :: [unquote(NimbleOptions.option_typespec(@options_schema))]
+
+  @doc false
+  def validate_module_name(name) do
+    if is_atom(name) and String.starts_with?(Atom.to_string(name), "Elixir.") do
+      {:ok, name}
+    else
+      {:error, "expected a module name, got: #{inspect(name)}"}
+    end
+  end
 
   @doc false
   def validate_attrs(attrs) when is_list(attrs) do

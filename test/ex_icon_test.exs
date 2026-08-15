@@ -310,6 +310,24 @@ defmodule ExIconTest do
       assert Exception.message(error) =~
                ~s(invalid value for :default option: expected string, got: 2)
     end
+
+    test "returns error if the module name is not a module" do
+      for module_name <- [nil, true, :lowercase, "MyAppWeb.Components.Lucide"] do
+        assert {:error, %NimbleOptions.ValidationError{} = error} =
+                 validate_icon_sets(
+                   lucide:
+                     Keyword.put(
+                       config_with_attrs([]),
+                       :module_name,
+                       module_name
+                     )
+                 )
+
+        assert Exception.message(error) =~
+                 "invalid value for :module_name option: expected a module " <>
+                   "name, got: #{inspect(module_name)}"
+      end
+    end
   end
 
   defp validate_icon_sets(icon_sets) do
