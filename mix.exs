@@ -14,6 +14,13 @@ defmodule ExIcon.MixProject do
       deps: deps(),
       test_coverage: [tool: ExCoveralls],
       dialyzer: [
+        flags: [
+          :error_handling,
+          :extra_return,
+          :missing_return,
+          :underspecs,
+          :unknown
+        ],
         list_unused_filters: true,
         plt_add_apps: [:ex_unit, :mix],
         plt_file: {:no_warn, ".plts/dialyzer.plt"}

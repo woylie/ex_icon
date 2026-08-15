@@ -54,6 +54,7 @@ defmodule ExIcon.Template do
     """)
   end
 
+  @spec refuse_unexpected!() :: no_return()
   defp refuse_unexpected! do
     raise """
     Refusing to write the generated module
