@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [0.6.0] - 2026-08-15
+
 ### Changed
 
 - Use `Mix.raise/1` for exceptions.
