@@ -52,12 +52,32 @@ defmodule ExIcon.Target do
 
   defp load_provider!(provider) do
     if Code.ensure_loaded?(provider) do
-      :ok
+      required_callbacks!(provider)
     else
       Mix.raise("""
       could not load the provider #{inspect(provider)}
 
       Make sure the module exists and is compiled.
+      """)
+    end
+  end
+
+  @required_callbacks [release_url: 1, svg_folder: 1]
+
+  defp required_callbacks!(provider) do
+    missing =
+      for {name, arity} <- @required_callbacks,
+          not function_exported?(provider, name, arity),
+          do: "#{name}/#{arity}"
+
+    if missing == [] do
+      :ok
+    else
+      Mix.raise("""
+      #{inspect(provider)} is not a provider
+
+      It does not implement #{Enum.join(missing, " and ")} of the
+      ExIcon.Provider behaviour.
       """)
     end
   end

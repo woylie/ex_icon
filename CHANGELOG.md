@@ -12,6 +12,8 @@
 - Validate `module_name` in configuration.
 - Report the path and the line of the configuration file when it does not
   parse.
+- Name the missing callback when a module configured as `provider` does not
+  implement the `ExIcon.Provider` behaviour.
 
 ## [0.5.0] - 2026-08-02
 

@@ -1,6 +1,16 @@
 defmodule ExIcon.TargetTest do
   use ExUnit.Case, async: true
 
+  defmodule WithoutSvgFolder do
+    @moduledoc false
+    def release_url(version), do: "https://example.com/#{version}.zip"
+  end
+
+  defmodule WithoutReleaseUrl do
+    @moduledoc false
+    def svg_folder(_version), do: "icons"
+  end
+
   describe "Target.targets/1" do
     test "returns a single target without variants" do
       assert ExIcon.Target.targets(
@@ -57,6 +67,30 @@ defmodule ExIcon.TargetTest do
           module_path: "lib/components/icons.ex",
           module_name: MyAppWeb.Components.Icons
         )
+      end
+    end
+
+    test "raises if the provider is missing a required callback" do
+      for {provider, missing} <- [
+            {Enum, "release_url/1 and svg_folder/1"},
+            {WithoutSvgFolder, "svg_folder/1"},
+            {WithoutReleaseUrl, "release_url/1"}
+          ] do
+        error =
+          assert_raise Mix.Error, fn ->
+            ExIcon.Target.targets(
+              icons: :all,
+              provider: provider,
+              version: "1.0.0",
+              module_path: "lib/components/icons.ex",
+              module_name: MyAppWeb.Components.Icons
+            )
+          end
+
+        assert Exception.message(error) =~
+                 "#{inspect(provider)} is not a provider"
+
+        assert Exception.message(error) =~ "does not implement #{missing} of"
       end
     end
 
