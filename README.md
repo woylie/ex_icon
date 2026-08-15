@@ -20,7 +20,7 @@ Add `ex_icon` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ex_icon, "~> 0.5.0", only: :dev}
+    {:ex_icon, "~> 0.6.0", only: :dev}
   ]
 end
 ```
@@ -60,9 +60,10 @@ ExIcon expects a configuration file named `.ex_icon.exs` in your project root.
 ]
 ```
 
-`lucide` is an arbitrary name that is currently only used for CLI output.
-You can configure any number of icon providers. See `t:ExIcon.options/0` for
-all available options.
+`lucide` is a name of your choice. It labels the icon set in the output of the
+task and enables you to selectively build it with
+`mix ex_icon.gen.icons --icon-set lucide`. You can configure any number of icon
+providers. See `t:ExIcon.options/0` for all available options.
 
 With your configuration in place, you can download the configured releases and
 generate a module with function components for every icon set with:

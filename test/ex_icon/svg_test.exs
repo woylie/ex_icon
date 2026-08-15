@@ -32,9 +32,16 @@ defmodule ExIcon.SVGTest do
                SVG.parse(~s|<svg xmlns="x" xmlns:xlink="y"></svg>|)
     end
 
-    test "keeps the casing of names" do
-      assert {:ok, {[{"viewBox", "0 0 1 1"}, {"WIDTH", "24"}], _}} =
-               SVG.parse(~s|<svg viewBox="0 0 1 1" WIDTH="24"></svg>|)
+    test "uses the canonical casing of attribute names" do
+      assert {:ok, {[{"viewBox", "0 0 1 1"}, {"width", "24"}], _}} =
+               SVG.parse(~s|<svg viewbox="0 0 1 1" WIDTH="24"></svg>|)
+    end
+
+    test "downcases data and aria attribute names" do
+      assert {:ok, {_, ~s|<path data-name="a" aria-label="b" />|}} =
+               SVG.parse(
+                 ~s|<svg xmlns="x"><path data-Name="a" aria-Label="b" /></svg>|
+               )
     end
 
     test "resolves entities and writes them back out" do
@@ -272,7 +279,17 @@ defmodule ExIcon.SVGTest do
 
     test "accepts a root element in any casing" do
       assert SVG.parse(~s|<SVG xmlns="x"><PATH d="M1 1" /></SVG>|) ==
-               {:ok, {[{"xmlns", "x"}], ~s|<PATH d="M1 1" />|}}
+               {:ok, {[{"xmlns", "x"}], ~s|<path d="M1 1" />|}}
+    end
+
+    test "uses the canonical casing of element names" do
+      assert SVG.parse(~s|<svg xmlns="x"><Circle cx="1"></Circle></svg>|) ==
+               {:ok, {[{"xmlns", "x"}], ~s|<circle cx="1"></circle>|}}
+    end
+
+    test "matches a closing tag against the casing of its opening tag" do
+      assert SVG.parse(~s|<svg xmlns="x"><Circle cx="1"></circle></svg>|) ==
+               {:error, "</circle> closes an element that is not open"}
     end
 
     test "keeps a reference into the same file" do

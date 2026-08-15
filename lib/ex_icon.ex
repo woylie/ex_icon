@@ -54,7 +54,8 @@ defmodule ExIcon do
       """
     ],
     module_name: [
-      type: :atom,
+      type: {:custom, __MODULE__, :validate_module_name, []},
+      type_doc: "`t:module/0`",
       required: true,
       doc:
         "The name of the generated module. Example: `MyApp.Components.Lucide`."
@@ -175,6 +176,15 @@ defmodule ExIcon do
   @type options() :: [unquote(NimbleOptions.option_typespec(@options_schema))]
 
   @doc false
+  def validate_module_name(name) do
+    if is_atom(name) and String.starts_with?(Atom.to_string(name), "Elixir.") do
+      {:ok, name}
+    else
+      {:error, "expected a module name, got: #{inspect(name)}"}
+    end
+  end
+
+  @doc false
   def validate_attrs(attrs) when is_list(attrs) do
     with :ok <- validate_each_attr(attrs),
          :ok <- validate_unique_attrs(attrs) do
@@ -281,10 +291,17 @@ defmodule ExIcon do
 
   @doc false
   def read_config(path) when is_binary(path) do
-    with {:ok, file} <- File.read(path) do
-      {config, _} = Code.eval_string(file)
+    with {:ok, file} <- File.read(path),
+         {:ok, config} <- eval_config(file, path) do
       validate_config(config)
     end
+  end
+
+  defp eval_config(file, path) do
+    {config, _binding} = Code.eval_string(file, [], file: path)
+    {:ok, config}
+  rescue
+    error -> {:error, error}
   end
 
   @doc false

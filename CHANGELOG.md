@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## [0.6.0] - 2026-08-15
+
+### Changed
+
+- Use `Mix.raise/1` for exceptions.
+- Increase TLS depth to 3.
+
+### Fixed
+
+- Use canonical casing for SVG element and attribute names.
+- Validate `module_name` in configuration.
+- Report the path and the line of the configuration file when it does not
+  parse.
+- Name the missing callback when a module configured as `provider` does not
+  implement the `ExIcon.Provider` behaviour.
+
 ## [0.5.0] - 2026-08-02
 
 ### Fixed

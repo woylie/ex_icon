@@ -22,7 +22,7 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
       `.ex_icon.exs` in the folder the task is run in
     * `--force` - overwrites the generated modules without asking
     * `--icon-set` - only generates the given icon set, which must be one of
-      the top level keys in the configuration file
+      the keys under `icon_sets` in the configuration file
     * `--refresh` - discards the cached releases and downloads them again
 
   The task fails if a module was not written, so that a pipeline that

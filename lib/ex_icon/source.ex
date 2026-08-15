@@ -8,11 +8,11 @@ defmodule ExIcon.Source do
   def resolve!(opts) do
     case {Keyword.get(opts, :path), Keyword.get(opts, :provider)} do
       {nil, nil} ->
-        raise ArgumentError, """
+        Mix.raise("""
         icon set without a source
 
         Set either :path, or :provider and :version.
-        """
+        """)
 
       {path, nil} when is_binary(path) ->
         {:path, path}
@@ -21,11 +21,11 @@ defmodule ExIcon.Source do
         {:release, provider, fetch_version!(opts, provider)}
 
       {_path, _provider} ->
-        raise ArgumentError, """
+        Mix.raise("""
         icon set with two sources
 
         Set either :path, or :provider and :version, but not both.
-        """
+        """)
     end
   end
 
@@ -35,11 +35,11 @@ defmodule ExIcon.Source do
         version
 
       nil ->
-        raise ArgumentError, """
+        Mix.raise("""
         icon set without a version
 
         #{inspect(provider)} needs a :version to know which release to download.
-        """
+        """)
     end
   end
 
@@ -59,11 +59,11 @@ defmodule ExIcon.Source do
     if File.dir?(path) do
       path
     else
-      raise ArgumentError, """
+      Mix.raise("""
       #{inspect(path)} is not a folder
 
       The :path must be relative to the folder the task is run in.
-      """
+      """)
     end
   end
 
@@ -102,13 +102,13 @@ defmodule ExIcon.Source do
 
         {:error, reason} ->
           if !File.dir?(icon_dir) do
-            raise """
+            Mix.raise("""
             Unable to move the downloaded icons into the cache
 
             Tried moving '#{staging_dir}' to '#{icon_dir}', got:
 
             #{inspect(reason)}
-            """
+            """)
           end
       end
     after
@@ -130,12 +130,12 @@ defmodule ExIcon.Source do
         url
 
       _uri ->
-        raise ArgumentError, """
+        Mix.raise("""
         invalid release URL #{inspect(url)}
 
         #{inspect(provider)} has to return an https URL, or an http URL of a
         server on the local machine.
-        """
+        """)
     end
   end
 
@@ -162,7 +162,7 @@ defmodule ExIcon.Source do
       ssl: [
         verify: :verify_peer,
         cacerts: :public_key.cacerts_get(),
-        depth: 2,
+        depth: 3,
         customize_hostname_check: [
           match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
         ]
@@ -176,13 +176,13 @@ defmodule ExIcon.Source do
         body
 
       result ->
-        raise """
+        Mix.raise("""
         unable to fetch icons
 
         Tried fetching icons from '#{url}', got:
 
         #{inspect(result, pretty: true)}
-        """
+        """)
     end
   end
 
@@ -201,11 +201,11 @@ defmodule ExIcon.Source do
         normalize_modes!(path)
 
       result ->
-        raise """
+        Mix.raise("""
         Unable to unpack zip archive
 
         #{inspect(result, pretty: true)}
-        """
+        """)
     end
   end
 
@@ -215,11 +215,11 @@ defmodule ExIcon.Source do
         entries
 
       result ->
-        raise """
+        Mix.raise("""
         Unable to read zip archive
 
         #{inspect(result, pretty: true)}
-        """
+        """)
     end
   end
 
@@ -238,11 +238,11 @@ defmodule ExIcon.Source do
         name
 
       _zip ->
-        raise """
+        Mix.raise("""
         Unable to read zip archive
 
         The archive has no local file header at offset #{offset}.
-        """
+        """)
     end
   end
 
@@ -254,14 +254,14 @@ defmodule ExIcon.Source do
         :ok
 
       unsafe_entries ->
-        raise """
+        Mix.raise("""
         Refusing to unpack zip archive
 
         The archive contains entries that would be written outside the
         target folder:
 
         #{Enum.map_join(unsafe_entries, "\n", &"    #{&1}")}
-        """
+        """)
     end
   end
 
@@ -295,11 +295,11 @@ defmodule ExIcon.Source do
   defp refuse_above!(total, max_size) when total <= max_size, do: :ok
 
   defp refuse_above!(_total, max_size) do
-    raise """
+    Mix.raise("""
     Refusing to unpack zip archive
 
     The archive unpacks to more than #{div(max_size, 1024 * 1024)} MB.
-    """
+    """)
   end
 
   defp provider_name(module) do
@@ -320,12 +320,12 @@ defmodule ExIcon.Source do
     if Regex.match?(@version_regex, version) do
       version
     else
-      raise ArgumentError, """
+      Mix.raise("""
       invalid version #{inspect(version)}
 
       A version may only contain letters, digits, dots, hyphens and
       underscores, and has to start with a letter or a digit.
-      """
+      """)
     end
   end
 end

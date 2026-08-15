@@ -129,7 +129,7 @@ defmodule ExIcon.ComponentsTest do
 
       output =
         capture_io(fn ->
-          assert_raise ArgumentError,
+          assert_raise Mix.Error,
                        ~r/could not generate every configured icon/,
                        fn ->
                          ExIcon.Components.prepare_assigns(tmp_dir, opts)
@@ -351,7 +351,7 @@ defmodule ExIcon.ComponentsTest do
 
       output =
         capture_io(fn ->
-          assert_raise ArgumentError,
+          assert_raise Mix.Error,
                        ~r/could not generate every configured icon/,
                        fn ->
                          ExIcon.Components.prepare_assigns(tmp_dir, opts)
@@ -417,7 +417,7 @@ defmodule ExIcon.ComponentsTest do
       File.write!(Path.join(tmp_dir, "1password.svg"), "<svg></svg>")
       File.write!(Path.join(tmp_dir, "icon-1password.svg"), "<svg></svg>")
 
-      assert_raise ArgumentError, ~r/"icon_1password"/, fn ->
+      assert_raise Mix.Error, ~r/"icon_1password"/, fn ->
         ExIcon.Components.prepare_assigns(tmp_dir, opts)
       end
     end

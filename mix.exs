@@ -2,7 +2,7 @@ defmodule ExIcon.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/woylie/ex_icon"
-  @version "0.5.0"
+  @version "0.6.0"
 
   def project do
     [
@@ -14,6 +14,13 @@ defmodule ExIcon.MixProject do
       deps: deps(),
       test_coverage: [tool: ExCoveralls],
       dialyzer: [
+        flags: [
+          :error_handling,
+          :extra_return,
+          :missing_return,
+          :underspecs,
+          :unknown
+        ],
         list_unused_filters: true,
         plt_add_apps: [:ex_unit, :mix],
         plt_file: {:no_warn, ".plts/dialyzer.plt"}
@@ -43,7 +50,7 @@ defmodule ExIcon.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:eex, :inets, :logger, :ssl]
+      extra_applications: [:eex, :inets, :logger, :mix, :ssl]
     ]
   end
 
@@ -55,7 +62,8 @@ defmodule ExIcon.MixProject do
       {:ex_doc, "0.40.3", only: :dev, runtime: false},
       {:excoveralls, "0.18.5", only: :test},
       {:makeup_diff, "0.1.1", only: :dev, runtime: false},
-      {:nimble_options, "~> 1.1"}
+      {:nimble_options, "~> 1.1"},
+      {:phoenix_live_view, "~> 1.0", only: :test}
     ]
   end
 

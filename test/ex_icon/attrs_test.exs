@@ -186,7 +186,7 @@ defmodule ExIcon.AttrsTest do
 
       assert transform_svg(svg, ["stroke"]) ==
                {"""
-                <svg xmlNS="http://www.w3.org/2000/svg" WIDTH="24" heiGHt="24" viewbox="0 0 24 24" Stroke={@stroke} Stroke-Width="2" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke={@stroke} stroke-width="2" aria-hidden="true">
                   <path d="m12 19-7-7 7-7" />
                   <path d="M19 12H5" />
                 </svg>\
@@ -244,7 +244,7 @@ defmodule ExIcon.AttrsTest do
       svg = ~s(<svg Stroke-Width="2"></svg>)
 
       assert transform_svg(svg, [{"stroke-width", fixed: "1.5"}]) ==
-               {~s(<svg Stroke-Width="1.5" aria-hidden="true"></svg>), []}
+               {~s(<svg stroke-width="1.5" aria-hidden="true"></svg>), []}
     end
 
     test "keeps aria-hidden set by the svg" do
@@ -356,7 +356,7 @@ defmodule ExIcon.AttrsTest do
     test "raises if the value in the svg is not one of the given values" do
       svg = ~s(<svg stroke-linecap="butt"></svg>)
 
-      assert_raise ArgumentError,
+      assert_raise Mix.Error,
                    ~r/"butt" is not one of \["square", "round"\]/,
                    fn ->
                      transform_svg(svg, [
@@ -379,9 +379,9 @@ defmodule ExIcon.AttrsTest do
                 [{"aria_hidden", [default: "true"]}]}
     end
 
-    test "keeps the casing of aria-hidden set by the svg" do
+    test "matches aria-hidden set by the svg case-insensitively" do
       assert transform_svg(~s(<svg ARIA-HIDDEN="false"></svg>)) ==
-               {~s(<svg ARIA-HIDDEN="false"></svg>), []}
+               {~s(<svg aria-hidden="false"></svg>), []}
     end
 
     test "allows setting aria-hidden to a fixed value" do

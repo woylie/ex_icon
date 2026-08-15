@@ -171,7 +171,7 @@ defmodule ExIcon.SourceTest do
       File.write!(icon_dir, "not a folder")
 
       capture_io(fn ->
-        assert_raise RuntimeError,
+        assert_raise Mix.Error,
                      ~r/Unable to move the downloaded icons into the cache/,
                      fn -> ExIcon.Source.icon_dir(cache_dir, opts) end
       end)
@@ -245,7 +245,7 @@ defmodule ExIcon.SourceTest do
       end)
 
       capture_io(fn ->
-        assert_raise RuntimeError, ~r/unable to fetch icons/, fn ->
+        assert_raise Mix.Error, ~r/unable to fetch icons/, fn ->
           ExIcon.Source.icon_dir(tmp_dir, opts, true)
         end
       end)
@@ -265,7 +265,7 @@ defmodule ExIcon.SourceTest do
       ]
 
       capture_io(fn ->
-        assert_raise RuntimeError, ~r/unable to fetch icons/, fn ->
+        assert_raise Mix.Error, ~r/unable to fetch icons/, fn ->
           ExIcon.Source.icon_dir(tmp_dir, opts)
         end
       end)
@@ -302,7 +302,7 @@ defmodule ExIcon.SourceTest do
       for version <- ["../../etc", "1.0.0/../..", ".."] do
         opts = [provider: UnreachableProvider, version: version]
 
-        assert_raise ArgumentError, ~r/invalid version/, fn ->
+        assert_raise Mix.Error, ~r/invalid version/, fn ->
           ExIcon.Source.icon_dir(tmp_dir, opts)
         end
       end
@@ -312,7 +312,7 @@ defmodule ExIcon.SourceTest do
       opts = [provider: PlainHttpProvider, version: "1.0.0"]
 
       capture_io(fn ->
-        assert_raise ArgumentError, ~r/invalid release URL/, fn ->
+        assert_raise Mix.Error, ~r/invalid release URL/, fn ->
           ExIcon.Source.icon_dir(tmp_dir, opts)
         end
       end)
@@ -322,7 +322,7 @@ defmodule ExIcon.SourceTest do
       tmp_dir: tmp_dir
     } do
       capture_io(fn ->
-        assert_raise RuntimeError, fn ->
+        assert_raise Mix.Error, fn ->
           ExIcon.Source.icon_dir(tmp_dir,
             provider: UnreachableProvider,
             version: "1.0.0"
@@ -349,7 +349,7 @@ defmodule ExIcon.SourceTest do
     end
 
     test "raises if the archive is not a zip file", %{tmp_dir: tmp_dir} do
-      assert_raise RuntimeError, ~r/Unable to read zip archive/, fn ->
+      assert_raise Mix.Error, ~r/Unable to read zip archive/, fn ->
         ExIcon.Source.unpack_archive!("not a zip archive", tmp_dir)
       end
     end
@@ -362,7 +362,7 @@ defmodule ExIcon.SourceTest do
 
       zip = build_zip([{~c"icons/arrow-left.svg", "<svg></svg>"}])
 
-      assert_raise RuntimeError, ~r/Unable to unpack zip archive/, fn ->
+      assert_raise Mix.Error, ~r/Unable to unpack zip archive/, fn ->
         ExIcon.Source.unpack_archive!(zip, target)
       end
     end
@@ -374,7 +374,7 @@ defmodule ExIcon.SourceTest do
       target = Path.join(tmp_dir, "target")
       File.mkdir_p!(target)
 
-      assert_raise RuntimeError, ~r/unpacks to more than/, fn ->
+      assert_raise Mix.Error, ~r/unpacks to more than/, fn ->
         ExIcon.Source.unpack_archive!(zip, target, max_size: 1024)
       end
 
@@ -388,7 +388,7 @@ defmodule ExIcon.SourceTest do
       target = Path.join(tmp_dir, "target")
       File.mkdir_p!(target)
 
-      assert_raise RuntimeError, ~r/unpacks to more than/, fn ->
+      assert_raise Mix.Error, ~r/unpacks to more than/, fn ->
         ExIcon.Source.unpack_archive!(zip, target, max_size: 1024)
       end
     end
@@ -429,7 +429,7 @@ defmodule ExIcon.SourceTest do
       target = Path.join(tmp_dir, "target")
       File.mkdir_p!(target)
 
-      assert_raise RuntimeError, ~r/would be written outside/, fn ->
+      assert_raise Mix.Error, ~r/would be written outside/, fn ->
         ExIcon.Source.unpack_archive!(zip, target)
       end
 
@@ -449,7 +449,7 @@ defmodule ExIcon.SourceTest do
       target = Path.join([tmp_dir, "cache", "provider", "1.0.0.download-1"])
       File.mkdir_p!(target)
 
-      assert_raise RuntimeError, ~r/would be written outside/, fn ->
+      assert_raise Mix.Error, ~r/would be written outside/, fn ->
         ExIcon.Source.unpack_archive!(zip, target)
       end
 
@@ -471,7 +471,7 @@ defmodule ExIcon.SourceTest do
       assert {:ok, [_comment, {:zip_file, ~c"icons/aaaaaa.svg", _, _, _, _}]} =
                :zip.list_dir(zip)
 
-      assert_raise RuntimeError, ~r/would be written outside/, fn ->
+      assert_raise Mix.Error, ~r/would be written outside/, fn ->
         ExIcon.Source.unpack_archive!(zip, target)
       end
 
@@ -486,7 +486,7 @@ defmodule ExIcon.SourceTest do
       target = Path.join(tmp_dir, "target")
       File.mkdir_p!(target)
 
-      assert_raise RuntimeError, ~r/no local file header/, fn ->
+      assert_raise Mix.Error, ~r/no local file header/, fn ->
         ExIcon.Source.unpack_archive!(zip, target)
       end
 
@@ -498,7 +498,7 @@ defmodule ExIcon.SourceTest do
       target = Path.join(tmp_dir, "target")
       File.mkdir_p!(target)
 
-      assert_raise RuntimeError, ~r/would be written outside/, fn ->
+      assert_raise Mix.Error, ~r/would be written outside/, fn ->
         ExIcon.Source.unpack_archive!(zip, target)
       end
 
