@@ -1,5 +1,5 @@
 defmodule ExIcon.TemplateTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias ExIcon.Template
 
