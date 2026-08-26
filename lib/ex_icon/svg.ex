@@ -292,21 +292,25 @@ defmodule ExIcon.SVG do
   end
 
   defp refuse_unknown_functions(value, allowed) do
-    @function_regex
-    |> Regex.scan(value, capture: :all_but_first)
-    |> Enum.map(fn [function] -> String.downcase(function) end)
-    |> Enum.find(&(&1 not in allowed))
-    |> case do
+    disallowed_function =
+      @function_regex
+      |> Regex.scan(value, capture: :all_but_first)
+      |> Enum.map(fn [function] -> String.downcase(function) end)
+      |> Enum.find(&(&1 not in allowed))
+
+    case disallowed_function do
       nil -> :ok
       function -> {:error, "the #{function}() function is not allowed"}
     end
   end
 
   defp refuse_external_url(name, value) do
-    @url_regex
-    |> Regex.scan(value, capture: :all_but_first)
-    |> Enum.all?(fn [target] -> String.starts_with?(target, "#") end)
-    |> case do
+    only_internal? =
+      @url_regex
+      |> Regex.scan(value, capture: :all_but_first)
+      |> Enum.all?(fn [target] -> String.starts_with?(target, "#") end)
+
+    case only_internal? do
       true -> :ok
       false -> {:error, "#{name} may only point into the same file"}
     end
