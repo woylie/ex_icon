@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-29
+
+Stable release.
+
 ## [0.6.0] - 2026-08-15
 
 ### Changed
@@ -187,7 +191,8 @@ the bundled providers:
 
 Initial release.
 
-[Unreleased]: https://github.com/woylie/ex_icon/compare/0.6.0...HEAD
+[Unreleased]: https://github.com/woylie/ex_icon/compare/1.0.0...HEAD
+[1.0.0]: https://github.com/woylie/ex_icon/compare/0.6.0...1.0.0
 [0.6.0]: https://github.com/woylie/ex_icon/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/woylie/ex_icon/compare/0.4.0...0.5.0
 [0.4.0]: https://github.com/woylie/ex_icon/compare/0.3.0...0.4.0

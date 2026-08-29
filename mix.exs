@@ -2,7 +2,7 @@ defmodule ExIcon.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/woylie/ex_icon"
-  @version "0.6.0"
+  @version "1.0.0"
 
   def project do
     [
