@@ -2,7 +2,7 @@ defmodule ExIcon.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/woylie/ex_icon"
-  @version "0.6.0"
+  @version "1.0.0"
 
   def project do
     [
@@ -63,7 +63,7 @@ defmodule ExIcon.MixProject do
       {:excoveralls, "0.18.5", only: :test},
       {:makeup_diff, "0.1.1", only: :dev, runtime: false},
       {:nimble_options, "~> 1.1"},
-      {:phoenix_live_view, "== 1.2.9", only: :test}
+      {:phoenix_live_view, "== 1.2.11", only: :test}
     ]
   end
 
