@@ -24,6 +24,25 @@ defmodule ExIcon do
       `icons: :all`. Example: `["1password"]`.
       """
     ],
+    rename: [
+      type: {:custom, __MODULE__, :validate_rename, []},
+      type_doc: "map of `t:String.t/0` to `t:String.t/0`",
+      required: false,
+      default: %{},
+      doc: """
+      Function names for individual icons, keyed by icon name. Use it to keep
+      both icons when two icon names become the same function name. Example:
+      `%{"arrow_left" => "arrow_left_alt"}`.
+
+      A function name starts with a lowercase letter, contains only lowercase
+      letters, digits and underscores, and is not a reserved word. It does not
+      get an `icon_` prefix.
+
+      An icon listed here cannot be in `exclude`. If `icons` is a list, it has to
+      include the icon. With `icons: :all`, an icon that the folder does not
+      have is ignored, so that the variants of an icon set can share the option.
+      """
+    ],
     provider: [
       type: :atom,
       required: false,
@@ -183,6 +202,27 @@ defmodule ExIcon do
   end
 
   @doc false
+  def validate_rename(rename) when is_map(rename) do
+    Enum.find_value(rename, {:ok, rename}, fn
+      {icon_name, function_name}
+      when is_binary(icon_name) and is_binary(function_name) ->
+        if not ExIcon.Components.valid_function_name?(function_name),
+          do:
+            {:error,
+             "icon #{inspect(icon_name)} cannot be renamed to #{inspect(function_name)}: a function name starts with a lowercase letter, contains only lowercase letters, digits and underscores, and is not a reserved word"}
+
+      entry ->
+        {:error,
+         "expected an icon name and a function name, got: #{inspect(entry)}"}
+    end)
+  end
+
+  def validate_rename(rename) do
+    {:error,
+     "expected a map of icon names to function names, got: #{inspect(rename)}"}
+  end
+
+  @doc false
   def validate_attrs(attrs) when is_list(attrs) do
     with :ok <- validate_each_attr(attrs),
          :ok <- validate_unique_attrs(attrs) do
@@ -302,6 +342,49 @@ defmodule ExIcon do
 
   @doc false
   def validate_config(config) do
-    NimbleOptions.validate(config, @config_schema)
+    with {:ok, config} <- NimbleOptions.validate(config, @config_schema),
+         :ok <- validate_renamed_icons(config) do
+      {:ok, config}
+    end
+  end
+
+  # :rename is checked against :icons and :exclude here, before anything is
+  # downloaded or written
+  defp validate_renamed_icons(config) do
+    config
+    |> Keyword.fetch!(:icon_sets)
+    |> Enum.find_value(:ok, fn {name, opts} ->
+      with message when is_binary(message) <- renamed_icon_error(opts) do
+        {:error,
+         %NimbleOptions.ValidationError{
+           key: :rename,
+           keys_path: [:icon_sets, name],
+           message: message,
+           value: Keyword.fetch!(opts, :rename)
+         }}
+      end
+    end)
+  end
+
+  defp renamed_icon_error(opts) do
+    icons = Keyword.fetch!(opts, :icons)
+    exclude = Keyword.fetch!(opts, :exclude)
+
+    opts
+    |> Keyword.fetch!(:rename)
+    |> Map.keys()
+    |> Enum.sort()
+    |> Enum.find_value(fn icon_name ->
+      cond do
+        icon_name in exclude ->
+          "icon #{inspect(icon_name)} is in both :rename and :exclude; remove it from one of them"
+
+        is_list(icons) and icon_name not in icons ->
+          "icon #{inspect(icon_name)} is in :rename but not in :icons; add it to :icons or remove it from :rename"
+
+        true ->
+          nil
+      end
+    end)
   end
 end

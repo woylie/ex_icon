@@ -61,7 +61,10 @@ ExIcon expects a configuration file named `.ex_icon.exs` in your project root.
       # generate all available icons.
       icons: ["arrow-left", "arrow-right"],
       # Icon names to skip, which is mostly useful with `icons: :all`.
-      exclude: []
+      exclude: [],
+      # Function names for individual icons, keyed by icon name.
+      # Example: %{"arrow_left" => "arrow_left_alt"}
+      rename: %{}
     ]
   ]
 ]
@@ -99,6 +102,17 @@ in Elixir get the same prefix, so `end.svg` becomes `icon_end`.
 Icons with names that cannot be turned into function names are skipped and
 reported. If you listed such an icon in your configuration, the task fails
 instead.
+
+If two SVG files become the same function name, such as `arrow-left.svg` and
+`arrow_left.svg`, the task fails and lists both. You can skip one of them with
+`exclude`, or set another function name for one of them with `rename`:
+
+```elixir
+rename: %{"arrow_left" => "arrow_left_alt"}
+```
+
+A function name you set with `rename` is used as it is, so it does not get an
+`icon_` prefix.
 
 ## Icon contents
 

@@ -10,6 +10,7 @@ defmodule ExIcon.Components do
     global_attrs = Keyword.get(opts, :global_attrs, false)
 
     exclude = MapSet.new(Keyword.get(opts, :exclude, []))
+    rename = Keyword.get(opts, :rename, %{})
 
     configured = Keyword.fetch!(opts, :icons)
 
@@ -24,10 +25,10 @@ defmodule ExIcon.Components do
     icons =
       wanted
       |> Enum.map(fn icon_name ->
-        with {:ok, function_name} <- function_name(icon_name),
+        with {:ok, function_name} <- function_name(icon_name, rename),
              svg when is_binary(svg) <- read_icon(path, icon_name),
              {:ok, parsed} <- parse_icon(icon_name, svg) do
-          {function_name,
+          {icon_name, function_name,
            ExIcon.Attrs.transform_parsed(parsed, attrs, global_attrs)}
         else
           _ -> nil
@@ -35,6 +36,9 @@ defmodule ExIcon.Components do
       end)
       |> Enum.reject(&is_nil/1)
       |> ensure_unique_names!()
+      |> Enum.map(fn {_icon_name, function_name, icon} ->
+        {function_name, icon}
+      end)
 
     if configured != :all, do: ensure_nothing_missing!(wanted, icons)
 
@@ -56,18 +60,24 @@ defmodule ExIcon.Components do
   # Icon names end up as function names in the generated module, so they are
   # restricted to characters that can produce one. Names that cannot be used as
   # they are get an `icon_` prefix.
-  @icon_name_regex ~r/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/
+  @icon_name_regex ~r/\A[a-zA-Z0-9][a-zA-Z0-9_-]*\z/
 
   # a function cannot be named after a reserved word; `unquote` and
-  # `unquote_splicing` parse but are special forms, and `not` is fine
+  # `unquote_splicing` parse but are special forms, `module_info` is defined by
+  # Erlang for every module, and `not` is fine
   @reserved_names ~w(
-    after and catch do else end false fn in nil or rescue true unquote
-    unquote_splicing when
+    after and catch do else end false fn in module_info nil or rescue true
+    unquote unquote_splicing when
   )
 
-  defp function_name(icon_name) do
+  # the icon name is checked even if the icon is renamed, because it is also
+  # the name of the file that is read
+  defp function_name(icon_name, rename) do
     if Regex.match?(@icon_name_regex, icon_name) do
-      {:ok, icon_name |> ExIcon.Attrs.to_snake_case() |> prefix_name()}
+      {:ok,
+       Map.get_lazy(rename, icon_name, fn ->
+         icon_name |> ExIcon.Attrs.to_snake_case() |> prefix_name()
+       end)}
     else
       regex = inspect(@icon_name_regex.source)
       IO.puts("#{skipping(icon_name)}: icon names must match #{regex}")
@@ -84,27 +94,45 @@ defmodule ExIcon.Components do
 
   defp prefix_name(name), do: name
 
+  # a function name set with :rename does not get a prefix, so it has to be
+  # valid as it is
+  @function_name_regex ~r/\A[a-z][a-z0-9_]*\z/
+
+  def valid_function_name?(name) do
+    Regex.match?(@function_name_regex, name) and name not in @reserved_names
+  end
+
   defp ensure_unique_names!(icons) do
     duplicates =
       icons
-      |> Enum.frequencies_by(fn {name, _} -> name end)
-      |> Enum.filter(fn {_name, count} -> count > 1 end)
-      |> Enum.map(fn {name, _count} -> name end)
+      |> Enum.group_by(
+        fn {_icon_name, function_name, _icon} -> function_name end,
+        fn {icon_name, _function_name, _icon} -> icon_name end
+      )
+      |> Enum.filter(fn {_function_name, icon_names} ->
+        length(icon_names) > 1
+      end)
+      |> Enum.sort()
 
     if duplicates != [] do
       Mix.raise("""
       duplicate function names
 
-      Remove the duplicate icons from the :icons option, or add one of them to
-      the :exclude option.
+      Remove the duplicate icons from the :icons option, add one of them to the
+      :exclude option, or set another function name for one of them with the
+      :rename option.
 
-      Function names:
+      Function names and the icons they come from:
 
-      #{Enum.map_join(duplicates, "\n", &"    #{inspect(&1)}")}
+      #{Enum.map_join(duplicates, "\n", &format_duplicate/1)}
       """)
     end
 
     icons
+  end
+
+  defp format_duplicate({function_name, icon_names}) do
+    "    #{inspect(function_name)}: #{Enum.map_join(icon_names, ", ", &inspect/1)}"
   end
 
   defp parse_icon(name, svg) do
