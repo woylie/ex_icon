@@ -11,8 +11,8 @@ defmodule ExIcon do
       type: {:or, [{:list, :string}, {:in, [:all]}]},
       required: true,
       doc: """
-      Either a list of icon names you want to generate (e.g. `["arrow-left"]`),
-      or `:all` if you want to generate all available icons.
+      Either a list of icon names you want to generate, or `:all` if you want
+      to generate all available icons. Example: `["arrow-left"]`.
       """
     ],
     exclude: [
@@ -28,8 +28,8 @@ defmodule ExIcon do
       type: :atom,
       required: false,
       doc: """
-      A module implementing the `ExIcon.Provider` behaviour. Required with
-      `version`, unless `path` is set.
+      A module implementing the `ExIcon.Provider` behaviour. Set it together
+      with `version`, or set `path` instead.
       """
     ],
     version: [
@@ -49,8 +49,8 @@ defmodule ExIcon do
       type: :string,
       required: true,
       doc: """
-      The destination path of the icon module that ExIcon will generate
-      for you. Example: `"lib/my_app_web/components/lucide.ex"`.
+      The destination path of the icon module that ExIcon generates. Example:
+      `"lib/my_app_web/components/lucide.ex"`.
       """
     ],
     module_name: [
@@ -69,9 +69,7 @@ defmodule ExIcon do
       implement `c:ExIcon.Provider.variants/1`. Example: `[:outline, :solid]`.
 
       Each variant is generated into a separate module, with the variant
-      appended to `module_name` and `module_path`.
-
-      Example:
+      appended to `module_name` and `module_path`. For example:
 
       - `module_name`: `MyApp.Components.Heroicons`
       - `module_path`: `"lib/my_app_web/components/heroicons.ex"`
@@ -120,19 +118,19 @@ defmodule ExIcon do
       Configures the attributes of the `<svg>` element. Each entry is either an
       attribute name, or a tuple with the attribute name and options.
 
-      If a list entry is a string (e.g. `"stroke"`), the value is replaced with
-      a HEEx variable and a component attribute is added.
+      If a list entry is a string, such as `"stroke"`, a component attribute
+      is added, and the value of the SVG attribute is taken from it.
 
       If a list entry is a tuple, the following options are supported:
 
-      - `default` (`{"stroke-width", default: "1.5"}`) - Sets the `default`
+      - `:default` (`{"stroke-width", default: "1.5"}`) - Sets the `default`
         option on `attr`.
-      - `values` (`{"stroke-linecap", values: ["square", "round"]}`) - Sets the
-        `values` option on `attr`. Generation fails if the value in an SVG file
-        is not among the values.
-      - `required` (`{"stroke-width", required: true}`) - Sets the `required`
+      - `:values` (`{"stroke-linecap", values: ["square", "round"]}`) - Sets
+        the `values` option on `attr`. Generation fails if the value in an SVG
+        file is not among the values.
+      - `:required` (`{"stroke-width", required: true}`) - Sets the `required`
         option on `attr`.
-      - `fixed` (`{"fill", fixed: "none"}`) - Sets a fixed value for the
+      - `:fixed` (`{"fill", fixed: "none"}`) - Sets a fixed value for the
         SVG attribute without adding a component attribute.
 
       Attributes that are not present in the original SVG file are added, as
@@ -234,8 +232,7 @@ defmodule ExIcon do
 
   defp validate_attr(attr) do
     {:error,
-     "expected an attribute name or a {name, options} tuple, got: " <>
-       inspect(attr)}
+     "expected an attribute name or a {name, options} tuple, got: #{inspect(attr)}"}
   end
 
   defp validate_attr_options(name, opts) do
@@ -281,8 +278,7 @@ defmodule ExIcon do
 
       is_list(values) and default != :none and default not in values ->
         {:error,
-         "attribute #{inspect(name)} has the default value " <>
-           "#{inspect(default)}, which is not one of #{inspect(values)}"}
+         "attribute #{inspect(name)} has the default value #{inspect(default)}, which is not one of #{inspect(values)}"}
 
       true ->
         :ok

@@ -44,8 +44,7 @@ defmodule ExIcon.Target do
       Mix.raise("""
       variants are not supported for an icon set with a :path
 
-      Variants are the style folders of a release. Configure one icon set per
-      folder instead.
+      Remove :variants, and configure one icon set per folder instead.
       """)
     end
   end
@@ -55,9 +54,13 @@ defmodule ExIcon.Target do
       required_callbacks!(provider)
     else
       Mix.raise("""
-      could not load the provider #{inspect(provider)}
+      could not load the provider
 
       Make sure the module exists and is compiled.
+
+      Got:
+
+          #{inspect(provider)}
       """)
     end
   end
@@ -74,10 +77,18 @@ defmodule ExIcon.Target do
       :ok
     else
       Mix.raise("""
-      #{inspect(provider)} is not a provider
+      invalid provider
 
-      It does not implement #{Enum.join(missing, " and ")} of the
+      The module does not implement every required callback of the
       ExIcon.Provider behaviour.
+
+      Missing:
+
+      #{Enum.map_join(missing, "\n", &"    #{&1}")}
+
+      Got:
+
+          #{inspect(provider)}
       """)
     end
   end
@@ -87,10 +98,15 @@ defmodule ExIcon.Target do
       provider.variants(version)
     else
       Mix.raise("""
-      the :variants option is not supported by #{inspect(provider)}
+      the :variants option is not supported by the provider
 
-      Only providers that implement the optional variants/1 callback of the
-      ExIcon.Provider behaviour have variants to choose from.
+      Remove :variants from the icon set. Only providers that implement the
+      optional variants/1 callback of the ExIcon.Provider behaviour have
+      variants.
+
+      Got:
+
+          #{inspect(provider)}
       """)
     end
   end
@@ -101,10 +117,24 @@ defmodule ExIcon.Target do
         folder
 
       :error ->
-        Mix.raise("""
-        unknown variant #{inspect(variant)} for #{inspect(provider)}
+        variants =
+          available
+          |> Map.keys()
+          |> Enum.sort()
+          |> Enum.map_join("\n", &"    #{inspect(&1)}")
 
-        Available variants: #{inspect(Enum.sort(Map.keys(available)))}
+        Mix.raise("""
+        unknown variant
+
+        Choose one of the variants of #{inspect(provider)}.
+
+        Available variants:
+
+        #{variants}
+
+        Got:
+
+            #{inspect(variant)}
         """)
     end
   end

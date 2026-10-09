@@ -224,7 +224,7 @@ defmodule ExIcon.SVGTest do
              ) == {:error, "the url() function is not allowed"}
     end
 
-    # a blocklist for url( misses these, which fetch just the same
+    # a blocklist for url( misses these, which also fetch a resource
     test "rejects a style that loads a resource with another function" do
       for function <- ~w(image-set src cross-fade image paint element attr) do
         assert SVG.parse(
@@ -255,7 +255,7 @@ defmodule ExIcon.SVGTest do
       end
     end
 
-    test "checks a value whatever the case of its attribute name" do
+    test "checks a value regardless of the casing of its attribute name" do
       for attribute <- ~w(STYLE Style FILL Stroke CLIP-PATH XLINK:HREF HREF) do
         assert {:error, _} =
                  SVG.parse(

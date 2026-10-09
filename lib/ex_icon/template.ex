@@ -44,20 +44,21 @@ defmodule ExIcon.Template do
   @spec refuse_syntax_error!(binary) :: no_return()
   defp refuse_syntax_error!(message) do
     Mix.raise("""
-    Refusing to write the generated module
+    refusing to write the generated module
 
-    The generated code is not valid Elixir:
+    The generated code is not valid Elixir. This is a bug in ExIcon. Please
+    report it, together with the icon set that caused it.
+
+    Error:
 
         #{message}
-
-    An icon whose name cannot be used as a function name can cause this.
     """)
   end
 
   @spec refuse_unexpected!() :: no_return()
   defp refuse_unexpected! do
     raise """
-    Refusing to write the generated module
+    refusing to write the generated module
 
     It contains code that does not belong to an icon component. This is a
     bug in ExIcon. Please report it.

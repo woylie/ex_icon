@@ -16,7 +16,9 @@ defmodule ExIcon.Providers.LucideTest do
     end
   end
 
-  test "does not implement the optional variants callback" do
-    refute function_exported?(Lucide, :variants, 1)
+  describe "variants/1" do
+    test "is not implemented" do
+      refute function_exported?(Lucide, :variants, 1)
+    end
   end
 end

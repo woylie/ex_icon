@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/woylie/ex_icon/workflows/CI/badge.svg)](https://github.com/woylie/ex_icon/actions) [![Hex](https://img.shields.io/hexpm/v/ex_icon)](https://hex.pm/packages/ex_icon) [![Hex Docs](https://img.shields.io/badge/hex-docs-green)](https://hexdocs.pm/ex_icon/readme.html) [![Coverage Status](https://coveralls.io/repos/github/woylie/ex_icon/badge.svg)](https://coveralls.io/github/woylie/ex_icon)
 
-Generic icon library for Phoenix LiveView.
+Generates Phoenix LiveView function components from SVG icon sets.
 
 - Downloads icon sets and generates Phoenix LiveView function components.
 - Generates components from a folder of your own SVG files.
@@ -25,6 +25,13 @@ def deps do
 end
 ```
 
+### Compatibility
+
+This package is [tested](https://github.com/woylie/ex_icon/actions/workflows/ci.yml)
+against the Elixir and OTP versions that are still supported upstream. Older
+versions down to the requirement in `mix.exs` may still work, but they are not
+covered by CI and not officially supported.
+
 ## Usage
 
 ExIcon expects a configuration file named `.ex_icon.exs` in your project root.
@@ -41,7 +48,7 @@ ExIcon expects a configuration file named `.ex_icon.exs` in your project root.
       module_path: "lib/my_app_web/components/lucide.ex",
       # The name of the generated module.
       module_name: MyAppWeb.Components.Lucide,
-      # If supported by the provider, choose the style variants to generate
+      # If supported by the provider, choose the style variants to generate.
       # Example: [:outline, :solid]
       variants: [],
       # SVG attributes to turn into component attributes, to override, or to
@@ -74,10 +81,10 @@ mix ex_icon.gen.icons
 
 Downloaded releases are cached in your Mix cache folder (`~/.cache/mix/ex_icon`
 on Linux, `~/Library/Caches/mix/ex_icon` on macOS), so regenerating your icons
-does not download the same release again. The exact path is printed after the
-task ran.
+does not download the same release again. The task prints the exact path when
+it finishes.
 
-Paths in the configuration file stay relative to the folder you run the task in.
+Paths in the configuration file are relative to the folder you run the task in.
 
 Run `mix help ex_icon.gen.icons` for the available command line arguments.
 
@@ -318,10 +325,11 @@ requires regenerating them.
 
 ExIcon is actively maintained, but since it covers the use cases it was built
 for, you may not see frequent releases. Issues are fixed, and providers for
-further icon libraries are added when the need arises. There may well be use
-cases that ExIcon does not cover yet.
+further icon libraries are added when the need arises. There may be use cases
+that ExIcon does not cover yet.
 
 ## Contributing
 
 Please open an issue or PR if you need additional options, features, or support
-for other icon libraries. Be sure to read the [contributing guidelines](https://github.com/woylie/ex_icon?tab=contributing-ov-file).
+for other icon libraries. Read the [contributing guidelines](https://github.com/woylie/ex_icon?tab=contributing-ov-file)
+first.

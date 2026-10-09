@@ -89,8 +89,6 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
         IO.puts("Done.")
         if Enum.any?(icon_sets, &downloaded?/1), do: report_cache(cache_dir)
 
-        # a module that was not written makes the task fail, so that a check in
-        # a pipeline does not pass with modules that are out of date
         if :skipped in results, do: exit({:shutdown, 1})
 
       {:error, reason} ->
@@ -101,17 +99,29 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
 
   defp config_error(path, %{__exception__: true} = error) do
     """
-    #{path} is not valid.
+    invalid configuration file
 
     #{Exception.message(error)}
+
+    Path:
+
+        #{path}
     """
   end
 
   defp config_error(path, posix) do
     """
-    Could not read #{path}.
+    could not read the configuration file
 
-    #{:file.format_error(posix)}
+    Create it, or pass its path with --config.
+
+    Path:
+
+        #{path}
+
+    Error:
+
+        #{:file.format_error(posix)}
     """
   end
 
@@ -125,12 +135,20 @@ defmodule Mix.Tasks.ExIcon.Gen.Icons do
         [{key, opts}]
 
       :error ->
+        available = Enum.map_join(icon_sets, "\n", &"    #{elem(&1, 0)}")
+
         IO.puts("""
-        Icon set #{key} not found in configuration.
+        unknown icon set
+
+        Pass one of the icon sets in the configuration file to --icon-set.
 
         Available icon sets:
 
-            #{inspect(Keyword.keys(icon_sets))}
+        #{available}
+
+        Got:
+
+            #{name}
         """)
 
         exit({:shutdown, 1})

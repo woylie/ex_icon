@@ -11,7 +11,7 @@ defmodule ExIcon.TargetTest do
     def svg_folder(_version), do: "icons"
   end
 
-  describe "Target.targets/1" do
+  describe "targets/1" do
     test "returns a single target without variants" do
       assert ExIcon.Target.targets(
                icons: :all,
@@ -46,7 +46,7 @@ defmodule ExIcon.TargetTest do
     end
 
     test "raises for an unknown variant" do
-      assert_raise Mix.Error, ~r/unknown variant :outlined/, fn ->
+      assert_raise Mix.Error, ~r/unknown variant.*Got:\s+:outlined/s, fn ->
         ExIcon.Target.targets(
           icons: :all,
           provider: ExIcon.Providers.Heroicons,
@@ -72,9 +72,9 @@ defmodule ExIcon.TargetTest do
 
     test "raises if the provider is missing a required callback" do
       for {provider, missing} <- [
-            {Enum, "release_url/1 and svg_folder/1"},
-            {WithoutSvgFolder, "svg_folder/1"},
-            {WithoutReleaseUrl, "release_url/1"}
+            {Enum, ~r/Missing:\s+release_url\/1\s+svg_folder\/1/},
+            {WithoutSvgFolder, ~r/Missing:\s+svg_folder\/1/},
+            {WithoutReleaseUrl, ~r/Missing:\s+release_url\/1/}
           ] do
         error =
           assert_raise Mix.Error, fn ->
@@ -87,10 +87,9 @@ defmodule ExIcon.TargetTest do
             )
           end
 
-        assert Exception.message(error) =~
-                 "#{inspect(provider)} is not a provider"
-
-        assert Exception.message(error) =~ "does not implement #{missing} of"
+        assert Exception.message(error) =~ "invalid provider"
+        assert Exception.message(error) =~ missing
+        assert Exception.message(error) =~ "Got:\n\n    #{inspect(provider)}"
       end
     end
 
@@ -162,7 +161,7 @@ defmodule ExIcon.TargetTest do
 
     test "raises if the provider has no variants" do
       assert_raise Mix.Error,
-                   ~r/not supported by ExIcon.Providers.Lucide/,
+                   ~r/not supported by the provider.*Got:\s+ExIcon.Providers.Lucide/s,
                    fn ->
                      ExIcon.Target.targets(
                        icons: :all,

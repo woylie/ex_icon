@@ -29,7 +29,7 @@ defmodule ExIcon.SourceTest do
     def variants(_), do: %{plain: "icons", nested: "icons/nested"}
   end
 
-  describe "Source.icon_dir/3 with a served release" do
+  describe "icon_dir/3 with a served release" do
     @describetag :tmp_dir
 
     setup %{tmp_dir: tmp_dir} do
@@ -128,7 +128,7 @@ defmodule ExIcon.SourceTest do
       assert File.read!(marker) == "kept"
     end
 
-    test "downloads again with the force option", %{
+    test "downloads again with refresh", %{
       cache_dir: cache_dir,
       opts: opts
     } do
@@ -172,7 +172,7 @@ defmodule ExIcon.SourceTest do
 
       capture_io(fn ->
         assert_raise Mix.Error,
-                     ~r/Unable to move the downloaded icons into the cache/,
+                     ~r/unable to move the downloaded icons into the cache/,
                      fn -> ExIcon.Source.icon_dir(cache_dir, opts) end
       end)
 
@@ -195,7 +195,7 @@ defmodule ExIcon.SourceTest do
     end
   end
 
-  describe "Source.icon_dir/3" do
+  describe "icon_dir/3" do
     @describetag :tmp_dir
 
     test "reuses a cached release without downloading again", %{
@@ -221,7 +221,9 @@ defmodule ExIcon.SourceTest do
       assert File.read!(Path.join(svg_dir, "cached.svg")) == "<svg></svg>"
     end
 
-    test "downloads again when forced", %{tmp_dir: tmp_dir} do
+    test "discards the cached release with refresh if the download fails", %{
+      tmp_dir: tmp_dir
+    } do
       opts = [
         icons: :all,
         provider: UnreachableProvider,
@@ -283,9 +285,24 @@ defmodule ExIcon.SourceTest do
              ) ==
                []
     end
+
+    test "names the cache folder after the full provider module", %{
+      tmp_dir: tmp_dir
+    } do
+      capture_io(fn ->
+        assert_raise Mix.Error, fn ->
+          ExIcon.Source.icon_dir(tmp_dir,
+            provider: UnreachableProvider,
+            version: "1.0.0"
+          )
+        end
+      end)
+
+      assert File.ls!(tmp_dir) == ["ex_icon_source_test_unreachable_provider"]
+    end
   end
 
-  describe "Source.icon_dir/3 validation" do
+  describe "icon_dir/3 with invalid input" do
     @describetag :tmp_dir
 
     defmodule PlainHttpProvider do
@@ -296,7 +313,7 @@ defmodule ExIcon.SourceTest do
       def svg_folder(_), do: "icons"
     end
 
-    test "raises for a version that is not a plain version", %{
+    test "raises for a version that is a path", %{
       tmp_dir: tmp_dir
     } do
       for version <- ["../../etc", "1.0.0/../..", ".."] do
@@ -317,24 +334,9 @@ defmodule ExIcon.SourceTest do
         end
       end)
     end
-
-    test "keeps providers apart that share the last name segment", %{
-      tmp_dir: tmp_dir
-    } do
-      capture_io(fn ->
-        assert_raise Mix.Error, fn ->
-          ExIcon.Source.icon_dir(tmp_dir,
-            provider: UnreachableProvider,
-            version: "1.0.0"
-          )
-        end
-      end)
-
-      assert File.ls!(tmp_dir) == ["ex_icon_source_test_unreachable_provider"]
-    end
   end
 
-  describe "Source.unpack_archive!/2" do
+  describe "unpack_archive!/3" do
     @describetag :tmp_dir
 
     test "unpacks a regular archive", %{tmp_dir: tmp_dir} do
@@ -349,7 +351,7 @@ defmodule ExIcon.SourceTest do
     end
 
     test "raises if the archive is not a zip file", %{tmp_dir: tmp_dir} do
-      assert_raise Mix.Error, ~r/Unable to read zip archive/, fn ->
+      assert_raise Mix.Error, ~r/unable to read zip archive/, fn ->
         ExIcon.Source.unpack_archive!("not a zip archive", tmp_dir)
       end
     end
@@ -362,7 +364,7 @@ defmodule ExIcon.SourceTest do
 
       zip = build_zip([{~c"icons/arrow-left.svg", "<svg></svg>"}])
 
-      assert_raise Mix.Error, ~r/Unable to unpack zip archive/, fn ->
+      assert_raise Mix.Error, ~r/unable to unpack zip archive/, fn ->
         ExIcon.Source.unpack_archive!(zip, target)
       end
     end

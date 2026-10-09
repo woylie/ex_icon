@@ -43,8 +43,8 @@ Stable release.
 
 - Refuse release archives with entries that would be written outside the target
   folder.
-- Check the name a zip entry carries in its local file header, not only the one
-  in the central directory.
+- Check the name a zip entry has in its local file header, not only the one in
+  the central directory.
 - Refuse a release archive whose entries cannot be listed, instead of unpacking
   it unchecked.
 - Only allow known CSS functions in a `style` value, and reject values that
@@ -61,8 +61,7 @@ Stable release.
 ### Added
 
 - Add `default`, `values`, `required`, and `fixed` options to attribute
-  configuration, which allows you more control over the attributes in the
-  generated HEEx components.
+  configuration.
 - Add optional `c:ExIcon.Provider.variants/1` callback and `variants`
   configuration option for icon libraries that have multiple style variants.
   Each variant is generated into a module of its own, from a single download.
@@ -83,9 +82,9 @@ Stable release.
   other than `svg`.
 - Only allow `href` and `xlink:href` values that point at an ID in the same
   file. Reject `style` values that contain `url()`.
-- The handling of whitespaces and character references such as `&#233;` was
-  changed. Regenerating your icon modules with this version may produce diffs
-  even though the source SVG files haven't changed.
+- Change the handling of whitespace and character references such as
+  `&#233;`. Regenerated icon modules may differ even if the SVG files have not
+  changed.
 - Cache downloaded releases in the Mix cache folder instead of downloading them
   into a shared temporary folder on every run.
 - Only move a release into the cache once it is complete, so that an
@@ -101,7 +100,7 @@ Stable release.
 
 ### Removed
 
-- Remove ExIcon.transform_svg/2.
+- Remove `ExIcon.transform_svg/2`.
 
 ### Fixed
 
@@ -120,20 +119,17 @@ Stable release.
 
 ### Security
 
-- Escape SVG attribute values in the generated module. Previously, an attribute
-  value containing `#{}` was written into the generated component code
-  unescaped, where it would be evaluated during compilation.
-- Skip icons whose names cannot be turned into function names. Previously, a
-  file name in a release was written into the generated module unchecked, where
-  it could add arbitrary code.
+- Escape SVG attribute values in the generated module, so that `#{}` in a value
+  is not evaluated during compilation.
+- Skip icons whose names cannot be turned into function names, so that a file
+  name in a release cannot add code to the generated module.
 - Validate version string before downloading.
 - Set modes of the unpacked files instead of taking them from the archive.
 - Refuse a release archive that unpacks to more than 250 MB.
 - Require an https URL from a provider, unless it points at the local machine.
-- Parse icon files instead of copying their contents into the generated module.
-  Previously, an icon file could end the heredoc of a component and add code to
-  the module, or add a HEEx expression that was evaluated every time the
-  component was rendered.
+- Parse icon files instead of copying their contents into the generated module,
+  so that an icon file cannot end the heredoc of a component and add code to the
+  module, or add a HEEx expression that is evaluated on every render.
 
 ### How to upgrade
 

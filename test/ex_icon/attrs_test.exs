@@ -1,7 +1,7 @@
 defmodule ExIcon.AttrsTest do
   use ExUnit.Case, async: true
 
-  describe "template rendering" do
+  describe "icon.ex.eex" do
     test "generates the component documented in the readme" do
       svg = """
       <svg
@@ -61,8 +61,8 @@ defmodule ExIcon.AttrsTest do
     end
 
     test "escapes interpolation in attribute values" do
-      # An SVG attribute value can contain `#{}`, which would be evaluated as
-      # Elixir code during compilation.
+      # an SVG attribute value can contain `#{}`, which would be evaluated as
+      # Elixir code during compilation
       assert render_attr({"stroke", [default: ~S|#{1 + 1}|]}) =~
                ~S|attr :stroke, :string, default: "\#{1 + 1}"|
     end
@@ -113,7 +113,7 @@ defmodule ExIcon.AttrsTest do
       assert transform_svg(svg) == {String.trim(svg), []}
     end
 
-    test "transforms svg without inner content and extra attributes unchanged" do
+    test "only adds aria-hidden to an svg without body or configured attributes" do
       svg = """
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
       </svg>
@@ -147,7 +147,7 @@ defmodule ExIcon.AttrsTest do
                 ]}
     end
 
-    test "replaces attributes with HEEx variables (with line breaks)" do
+    test "replaces attributes with HEEx variables across line breaks" do
       assert transform_svg(
                """
                <svg
@@ -176,7 +176,7 @@ defmodule ExIcon.AttrsTest do
                 ]}
     end
 
-    test "attributes are case-insensitive" do
+    test "matches attribute names case-insensitively" do
       svg = """
       <svg xmlNS="http://www.w3.org/2000/svg" WIDTH="24" heiGHt="24" viewbox="0 0 24 24" Stroke="currentColor" Stroke-Width="2">
         <path d="m12 19-7-7 7-7" />
@@ -289,7 +289,7 @@ defmodule ExIcon.AttrsTest do
                 [{"class", [default: nil]}]}
     end
 
-    test "a nil default overrides the value of the svg" do
+    test "overrides the value of the svg with a nil default" do
       svg = ~s(<svg stroke="currentColor"></svg>)
 
       assert transform_svg(svg, [{"stroke", default: nil}]) ==
@@ -313,7 +313,7 @@ defmodule ExIcon.AttrsTest do
                 [{"stroke_width", [required: true]}]}
     end
 
-    test "a required attribute has no default, not even from the svg" do
+    test "sets no default for a required attribute" do
       svg = ~s(<svg stroke="currentColor"></svg>)
 
       assert transform_svg(svg, [{"stroke", required: true}]) ==
@@ -332,7 +332,7 @@ defmodule ExIcon.AttrsTest do
                 ]}
     end
 
-    test "required: false keeps the default from the svg" do
+    test "keeps the default from the svg with required: false" do
       svg = ~s(<svg stroke="currentColor"></svg>)
 
       assert transform_svg(svg, [{"stroke", required: false}]) ==
@@ -357,7 +357,7 @@ defmodule ExIcon.AttrsTest do
       svg = ~s(<svg stroke-linecap="butt"></svg>)
 
       assert_raise Mix.Error,
-                   ~r/"butt" is not one of \["square", "round"\]/,
+                   ~r/Values:\s+"square"\s+"round"\s+Got:\s+"butt"/,
                    fn ->
                      transform_svg(svg, [
                        {"stroke-linecap", values: ["square", "round"]}
