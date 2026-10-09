@@ -60,7 +60,7 @@ defmodule ExIcon.Components do
   # Icon names end up as function names in the generated module, so they are
   # restricted to characters that can produce one. Names that cannot be used as
   # they are get an `icon_` prefix.
-  @icon_name_regex ~r/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/
+  @icon_name_regex ~r/\A[a-zA-Z0-9][a-zA-Z0-9_-]*\z/
 
   # a function cannot be named after a reserved word; `unquote` and
   # `unquote_splicing` parse but are special forms, `module_info` is defined by

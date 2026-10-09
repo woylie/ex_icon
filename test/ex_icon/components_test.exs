@@ -240,6 +240,27 @@ defmodule ExIcon.ComponentsTest do
       assert output =~ "icon names must match"
     end
 
+    test "skips icon names with a trailing newline", %{tmp_dir: tmp_dir} do
+      opts = [
+        icons: ["arrow-left\n"],
+        provider: ExIcon.Providers.Lucide,
+        version: "1.8.0",
+        module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
+        module_name: MyAppWeb.Components.Lucide
+      ]
+
+      output =
+        capture_io(fn ->
+          assert_raise Mix.Error,
+                       ~r/could not generate every configured icon/,
+                       fn ->
+                         ExIcon.Components.prepare_assigns(tmp_dir, opts)
+                       end
+        end)
+
+      assert output =~ ~s(Skipping "arrow-left\\n.svg": icon names must match)
+    end
+
     test "prefixes icon names that are reserved words", %{tmp_dir: tmp_dir} do
       opts = [
         icons: :all,
