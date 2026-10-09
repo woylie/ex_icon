@@ -8,6 +8,19 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-09
+
+### Added
+
+- Add `rename` configuration option to set the function name of an icon.
+
+### Fixed
+
+- Add an `icon_` prefix to the generated function name `module_info`, so that
+  `module-info.svg` becomes `icon_module_info` instead of generating a module
+  that does not compile.
+- Skip and report icon names that end with a newline.
+
 ## [1.0.0] - 2026-08-29
 
 Stable release.
@@ -187,7 +200,8 @@ the bundled providers:
 
 Initial release.
 
-[Unreleased]: https://github.com/woylie/ex_icon/compare/1.0.0...HEAD
+[Unreleased]: https://github.com/woylie/ex_icon/compare/1.1.0...HEAD
+[1.1.0]: https://github.com/woylie/ex_icon/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/woylie/ex_icon/compare/0.6.0...1.0.0
 [0.6.0]: https://github.com/woylie/ex_icon/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/woylie/ex_icon/compare/0.4.0...0.5.0
