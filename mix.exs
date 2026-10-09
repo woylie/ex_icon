@@ -2,7 +2,7 @@ defmodule ExIcon.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/woylie/ex_icon"
-  @version "1.0.0"
+  @version "1.1.0"
 
   def project do
     [
@@ -58,12 +58,12 @@ defmodule ExIcon.MixProject do
   defp deps do
     [
       {:credo, "== 1.7.19", only: [:dev, :test], runtime: false},
-      {:dialyxir, "1.4.7", only: [:dev, :test], runtime: false},
-      {:ex_doc, "0.40.3", only: :dev, runtime: false},
+      {:dialyxir, "1.4.8", only: [:dev, :test], runtime: false},
+      {:ex_doc, "0.40.4", only: :dev, runtime: false},
       {:excoveralls, "0.18.5", only: :test},
       {:makeup_diff, "0.1.1", only: :dev, runtime: false},
       {:nimble_options, "~> 1.1"},
-      {:phoenix_live_view, "== 1.2.11", only: :test}
+      {:phoenix_live_view, "== 1.2.12", only: :test}
     ]
   end
 
