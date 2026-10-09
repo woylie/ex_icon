@@ -4,7 +4,6 @@ defmodule ExIcon.Source do
   # Answers where the SVG files of an icon set are: a folder given in the
   # configuration, or a release downloaded and unpacked into the cache.
 
-  # an icon set is either downloaded from a provider URL or read from a folder
   def resolve!(opts) do
     case {Keyword.get(opts, :path), Keyword.get(opts, :provider)} do
       {nil, nil} ->
@@ -38,7 +37,7 @@ defmodule ExIcon.Source do
         Mix.raise("""
         icon set without a version
 
-        #{inspect(provider)} needs a :version to know which release to download.
+        Set :version to the release of #{inspect(provider)} to download.
         """)
     end
   end
@@ -60,9 +59,13 @@ defmodule ExIcon.Source do
       path
     else
       Mix.raise("""
-      #{inspect(path)} is not a folder
+      icon set path is not a folder
 
-      The :path must be relative to the folder the task is run in.
+      Set :path to a folder, relative to the folder the task is run in.
+
+      Got:
+
+          #{inspect(path)}
       """)
     end
   end
@@ -103,11 +106,21 @@ defmodule ExIcon.Source do
         {:error, reason} ->
           if !File.dir?(icon_dir) do
             Mix.raise("""
-            Unable to move the downloaded icons into the cache
+            unable to move the downloaded icons into the cache
 
-            Tried moving '#{staging_dir}' to '#{icon_dir}', got:
+            Check that the cache folder is writable.
 
-            #{inspect(reason)}
+            Source:
+
+                #{inspect(staging_dir)}
+
+            Destination:
+
+                #{inspect(icon_dir)}
+
+            Error:
+
+                #{inspect(reason)}
             """)
           end
       end
@@ -131,10 +144,18 @@ defmodule ExIcon.Source do
 
       _uri ->
         Mix.raise("""
-        invalid release URL #{inspect(url)}
+        invalid release URL
 
-        #{inspect(provider)} has to return an https URL, or an http URL of a
-        server on the local machine.
+        Change release_url/1 of the provider to return an https URL. An http
+        URL is only allowed for a server on the local machine.
+
+        Provider:
+
+            #{inspect(provider)}
+
+        Got:
+
+            #{inspect(url)}
         """)
     end
   end
@@ -179,9 +200,15 @@ defmodule ExIcon.Source do
         Mix.raise("""
         unable to fetch icons
 
-        Tried fetching icons from '#{url}', got:
+        Check the :version and the network connection.
 
-        #{inspect(result, pretty: true)}
+        URL:
+
+            #{url}
+
+        Response:
+
+            #{inspect(result)}
         """)
     end
   end
@@ -202,9 +229,11 @@ defmodule ExIcon.Source do
 
       result ->
         Mix.raise("""
-        Unable to unpack zip archive
+        unable to unpack zip archive
 
-        #{inspect(result, pretty: true)}
+        Error:
+
+            #{inspect(result)}
         """)
     end
   end
@@ -216,9 +245,13 @@ defmodule ExIcon.Source do
 
       result ->
         Mix.raise("""
-        Unable to read zip archive
+        unable to read zip archive
 
-        #{inspect(result, pretty: true)}
+        The release is not a valid zip archive.
+
+        Error:
+
+            #{inspect(result)}
         """)
     end
   end
@@ -239,15 +272,20 @@ defmodule ExIcon.Source do
 
       _zip ->
         Mix.raise("""
-        Unable to read zip archive
+        unable to read zip archive
 
-        The archive has no local file header at offset #{offset}.
+        The archive has no local file header at an offset its central
+        directory names.
+
+        Offset:
+
+            #{offset}
         """)
     end
   end
 
-  # a path that climbs above the target only in total passes Erlang's own check,
-  # so `../icons/arrow-left.svg` nets out at zero and lands outside it
+  # Erlang only checks the depth a path ends at, so `../icons/arrow-left.svg`
+  # ends at depth zero, passes, and is written outside the target
   defp refuse_unsafe_entries!(names) do
     case Enum.filter(names, &unsafe_path?/1) do
       [] ->
@@ -255,10 +293,12 @@ defmodule ExIcon.Source do
 
       unsafe_entries ->
         Mix.raise("""
-        Refusing to unpack zip archive
+        refusing to unpack zip archive
 
         The archive contains entries that would be written outside the
-        target folder:
+        target folder.
+
+        Unsafe entries:
 
         #{Enum.map_join(unsafe_entries, "\n", &"    #{&1}")}
         """)
@@ -296,7 +336,7 @@ defmodule ExIcon.Source do
 
   defp refuse_above!(_total, max_size) do
     Mix.raise("""
-    Refusing to unpack zip archive
+    refusing to unpack zip archive
 
     The archive unpacks to more than #{div(max_size, 1024 * 1024)} MB.
     """)
@@ -321,10 +361,14 @@ defmodule ExIcon.Source do
       version
     else
       Mix.raise("""
-      invalid version #{inspect(version)}
+      invalid version
 
       A version may only contain letters, digits, dots, hyphens and
       underscores, and has to start with a letter or a digit.
+
+      Got:
+
+          #{inspect(version)}
       """)
     end
   end

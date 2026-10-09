@@ -7,14 +7,14 @@ defmodule ExIcon.Providers.Heroicons do
   The library has four variants, which can be selected with the `variants`
   configuration option:
 
-  - `:outline` - outlined icons on a 24x24 viewbox
-  - `:solid` - filled icons on a 24x24 viewbox
-  - `:mini` - filled icons on a 20x20 viewbox
-  - `:micro` - filled icons on a 16x16 viewbox
+  - `:outline` - outlined icons with a 24x24 `viewBox`
+  - `:solid` - filled icons with a 24x24 `viewBox`
+  - `:mini` - filled icons with a 20x20 `viewBox`
+  - `:micro` - filled icons with a 16x16 `viewBox`
 
   Without the option, only the `:outline` variant is generated.
 
-  Note that the variants differ in their attributes. The outlined icons have
+  The variants differ in their attributes. The outlined icons have
   `stroke` and `stroke-width` attributes and a `fill` of `none`, while the
   filled ones only have a `fill` of `currentColor`. Attributes that a variant
   does not have are ignored, so a single `attrs` option can cover all of them.

@@ -41,7 +41,6 @@ defmodule ExIcon.Components do
     [icons: icons, global_attrs: global_attrs]
   end
 
-  # raise if icon listed in the configuration is missing
   defp ensure_nothing_missing!(wanted, icons)
        when length(wanted) != length(icons) do
     Mix.raise("""
@@ -70,10 +69,8 @@ defmodule ExIcon.Components do
     if Regex.match?(@icon_name_regex, icon_name) do
       {:ok, icon_name |> ExIcon.Attrs.to_snake_case() |> prefix_name()}
     else
-      IO.puts(
-        "Skipping #{inspect(icon_name)}: icon names must match " <>
-          inspect(@icon_name_regex.source)
-      )
+      regex = inspect(@icon_name_regex.source)
+      IO.puts("#{skipping(icon_name)}: icon names must match #{regex}")
 
       :error
     end
@@ -98,11 +95,12 @@ defmodule ExIcon.Components do
       Mix.raise("""
       duplicate function names
 
-      These function names are generated more than once:
-      #{Enum.map_join(duplicates, ", ", &inspect/1)}
-
       Remove the duplicate icons from the :icons option, or add one of them to
       the :exclude option.
+
+      Function names:
+
+      #{Enum.map_join(duplicates, "\n", &"    #{inspect(&1)}")}
       """)
     end
 
@@ -115,7 +113,7 @@ defmodule ExIcon.Components do
         {:ok, parsed}
 
       {:error, reason} ->
-        IO.puts("Skipping #{name}.svg: #{reason}")
+        IO.puts("#{skipping(name)}: #{reason}")
         :error
     end
   end
@@ -128,10 +126,13 @@ defmodule ExIcon.Components do
         content
 
       {:error, error} ->
-        IO.puts("Could not read file #{path}: #{inspect(error)}")
+        reason = :file.format_error(error)
+        IO.puts("#{skipping(name)}: could not read #{path}: #{reason}")
         nil
     end
   end
+
+  defp skipping(icon_name), do: "Skipping #{inspect(icon_name <> ".svg")}"
 
   defp list_svgs(path) do
     path

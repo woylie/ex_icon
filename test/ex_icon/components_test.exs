@@ -3,7 +3,7 @@ defmodule ExIcon.ComponentsTest do
 
   import ExUnit.CaptureIO
 
-  describe "Components.prepare_assigns/2" do
+  describe "prepare_assigns/2" do
     @describetag :tmp_dir
     test "prepares assigns for configured icon", %{tmp_dir: tmp_dir} do
       icon_name = "arrow-left"
@@ -111,7 +111,7 @@ defmodule ExIcon.ComponentsTest do
                  ] = ExIcon.Components.prepare_assigns(tmp_dir, opts)
         end)
 
-      refute output =~ "Could not read file"
+      refute output =~ "could not read"
     end
 
     test "reports and fails for a configured icon that cannot be read", %{
@@ -136,8 +136,7 @@ defmodule ExIcon.ComponentsTest do
                        end
         end)
 
-      assert output =~ "Could not read file"
-      assert output =~ "does-not-exist.svg"
+      assert output =~ ~s(Skipping "does-not-exist.svg": could not read)
     end
 
     test "skips an icon of :all that cannot be read", %{tmp_dir: tmp_dir} do
@@ -160,7 +159,7 @@ defmodule ExIcon.ComponentsTest do
                  ] = ExIcon.Components.prepare_assigns(tmp_dir, opts)
         end)
 
-      assert output =~ "Skipping broken.svg"
+      assert output =~ ~s(Skipping "broken.svg")
     end
 
     test "ignores non-svg files", %{tmp_dir: tmp_dir} do
@@ -358,11 +357,11 @@ defmodule ExIcon.ComponentsTest do
                        end
         end)
 
-      assert output =~ "Skipping broken.svg"
+      assert output =~ ~s(Skipping "broken.svg")
       assert output =~ "the <script> element is not allowed"
     end
 
-    test "an icon cannot add code to the generated module", %{
+    test "does not let an icon add code to the generated module", %{
       tmp_dir: tmp_dir
     } do
       opts = [

@@ -68,7 +68,7 @@ defmodule ExIcon.MixProject do
   end
 
   defp description do
-    "Generic SVG icon component builder for Phoenix LiveView"
+    "Generates Phoenix LiveView function components from SVG icon sets"
   end
 
   defp package do

@@ -101,12 +101,23 @@ defmodule ExIcon.Attrs do
 
       true ->
         Mix.raise("""
-        invalid default value for the #{inspect(name)} attribute
+        invalid default value for an attribute
 
-        The value #{inspect(value)} is not one of #{inspect(values)}.
+        The default value is not one of the :values of the attribute. If it
+        comes from an SVG file, either add it to the :values option, or set a
+        :default that is one of them.
 
-        If it comes from an SVG file, either add it to the :values option, or
-        set a :default that is one of them.
+        Attribute:
+
+            #{inspect(name)}
+
+        Values:
+
+        #{Enum.map_join(values, "\n", &"    #{inspect(&1)}")}
+
+        Got:
+
+            #{inspect(value)}
         """)
     end
   end
@@ -168,7 +179,7 @@ defmodule ExIcon.Attrs do
     end)
   end
 
-  # converts HTML attributes and icon names to snake case; ignores casing
+  # downcases too, since attribute names are matched case-insensitively
   def to_snake_case(v) when is_binary(v) do
     v
     |> String.downcase()

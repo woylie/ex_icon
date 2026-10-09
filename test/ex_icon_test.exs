@@ -73,7 +73,7 @@ defmodule ExIconTest do
   end
 
   describe "validate_config/1" do
-    test "returns schema that accepts config with list of icons" do
+    test "accepts a list of icons" do
       config = [
         lucide: [
           icons: ["arrow-left", "arrow-right"],
@@ -88,7 +88,7 @@ defmodule ExIconTest do
       assert {:ok, _} = validate_icon_sets(config)
     end
 
-    test "returns schema that accepts config with all icons" do
+    test "accepts all icons" do
       config = [
         lucide: [
           icons: :all,
