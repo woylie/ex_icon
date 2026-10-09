@@ -251,7 +251,8 @@ defmodule ExIcon.ComponentsTest do
 
       # `WHEN` folds to `when`, and `not` is a reserved word that a function may
       # still be named after
-      for name <- ~w(do end unquote unquote_splicing WHEN not arrow-left) do
+      for name <-
+            ~w(do end unquote unquote_splicing module-info WHEN not arrow-left) do
         File.write!(Path.join(tmp_dir, "#{name}.svg"), "<svg></svg>")
       end
 
@@ -264,6 +265,7 @@ defmodule ExIcon.ComponentsTest do
                "arrow_left",
                "icon_do",
                "icon_end",
+               "icon_module_info",
                "icon_unquote",
                "icon_unquote_splicing",
                "icon_when",
@@ -416,9 +418,92 @@ defmodule ExIcon.ComponentsTest do
       File.write!(Path.join(tmp_dir, "1password.svg"), "<svg></svg>")
       File.write!(Path.join(tmp_dir, "icon-1password.svg"), "<svg></svg>")
 
-      assert_raise Mix.Error, ~r/"icon_1password"/, fn ->
-        ExIcon.Components.prepare_assigns(tmp_dir, opts)
-      end
+      assert_raise Mix.Error,
+                   ~r/"icon_1password": "1password", "icon-1password"/,
+                   fn -> ExIcon.Components.prepare_assigns(tmp_dir, opts) end
+    end
+
+    test "generates a renamed icon under the configured function name", %{
+      tmp_dir: tmp_dir
+    } do
+      opts = [
+        icons: :all,
+        rename: %{"arrow_left" => "arrow_left_alt"},
+        provider: ExIcon.Providers.Lucide,
+        version: "1.8.0",
+        module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
+        module_name: MyAppWeb.Components.Lucide
+      ]
+
+      File.write!(Path.join(tmp_dir, "arrow-left.svg"), ~s(<svg id="a"></svg>))
+      File.write!(Path.join(tmp_dir, "arrow_left.svg"), ~s(<svg id="b"></svg>))
+
+      assert [icons: icons, global_attrs: false] =
+               ExIcon.Components.prepare_assigns(tmp_dir, opts)
+
+      assert icons
+             |> Enum.map(fn {name, {svg, _}} -> {name, svg} end)
+             |> Enum.sort() ==
+               [
+                 {"arrow_left", ~s(<svg id="a" aria-hidden="true"></svg>)},
+                 {"arrow_left_alt", ~s(<svg id="b" aria-hidden="true"></svg>)}
+               ]
+    end
+
+    test "raises if a renamed icon takes the function name of another", %{
+      tmp_dir: tmp_dir
+    } do
+      opts = [
+        icons: ["arrow-left", "arrow-right"],
+        rename: %{"arrow-right" => "arrow_left"},
+        provider: ExIcon.Providers.Lucide,
+        version: "1.8.0",
+        module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
+        module_name: MyAppWeb.Components.Lucide
+      ]
+
+      File.write!(Path.join(tmp_dir, "arrow-left.svg"), "<svg></svg>")
+      File.write!(Path.join(tmp_dir, "arrow-right.svg"), "<svg></svg>")
+
+      assert_raise Mix.Error,
+                   ~r/"arrow_left": "arrow-left", "arrow-right"/,
+                   fn -> ExIcon.Components.prepare_assigns(tmp_dir, opts) end
+    end
+
+    test "does not prefix the function name of a renamed icon", %{
+      tmp_dir: tmp_dir
+    } do
+      opts = [
+        icons: ["1password"],
+        rename: %{"1password" => "one_password"},
+        provider: ExIcon.Providers.SimpleIcons,
+        version: "15.0.0",
+        module_path: Path.join(tmp_dir, "lib/components/simple_icons.ex"),
+        module_name: MyAppWeb.Components.SimpleIcons
+      ]
+
+      File.write!(Path.join(tmp_dir, "1password.svg"), "<svg></svg>")
+
+      assert [icons: [{"one_password", _}], global_attrs: false] =
+               ExIcon.Components.prepare_assigns(tmp_dir, opts)
+    end
+
+    test "ignores a renamed icon that the folder does not have", %{
+      tmp_dir: tmp_dir
+    } do
+      opts = [
+        icons: :all,
+        rename: %{"arrow-right" => "forward"},
+        provider: ExIcon.Providers.Lucide,
+        version: "1.8.0",
+        module_path: Path.join(tmp_dir, "lib/components/lucide.ex"),
+        module_name: MyAppWeb.Components.Lucide
+      ]
+
+      File.write!(Path.join(tmp_dir, "arrow-left.svg"), "<svg></svg>")
+
+      assert [icons: [{"arrow_left", _}], global_attrs: false] =
+               ExIcon.Components.prepare_assigns(tmp_dir, opts)
     end
   end
 end

@@ -329,6 +329,92 @@ defmodule ExIconTest do
                ~s(invalid value for :default option: expected string, got: 2)
     end
 
+    test "accepts renamed icons" do
+      rename = %{
+        "arrow_left" => "arrow_left_alt",
+        "1password" => "one_password"
+      }
+
+      assert {:ok, [icon_sets: [lucide: config]]} =
+               validate_icon_sets(
+                 lucide: Keyword.put(config_with_attrs([]), :rename, rename)
+               )
+
+      assert Keyword.fetch!(config, :rename) == rename
+    end
+
+    test "returns error if a renamed icon is not a valid function name" do
+      for function_name <- [
+            "1password",
+            "Arrow",
+            "arrow-left",
+            "_arrow",
+            "end",
+            "module_info",
+            "",
+            "arrow\n"
+          ] do
+        rename = %{"arrow-left" => function_name}
+
+        assert {:error, %NimbleOptions.ValidationError{} = error} =
+                 validate_icon_sets(
+                   lucide: Keyword.put(config_with_attrs([]), :rename, rename)
+                 )
+
+        assert Exception.message(error) =~
+                 ~s(icon "arrow-left" cannot be renamed to #{inspect(function_name)})
+      end
+    end
+
+    test "returns error if a renamed icon is excluded" do
+      for icons <- [:all, ["arrow-left"]] do
+        config =
+          Keyword.merge(
+            config_with_attrs([]),
+            icons: icons,
+            exclude: ["arrow-left"],
+            rename: %{"arrow-left" => "back"}
+          )
+
+        assert {:error, %NimbleOptions.ValidationError{} = error} =
+                 validate_icon_sets(lucide: config)
+
+        assert Exception.message(error) ==
+                 ~s|icon "arrow-left" is in both :rename and :exclude; remove it from one of them (in options [:icon_sets, :lucide])|
+      end
+    end
+
+    test "returns error if a renamed icon is not in the icon list" do
+      config =
+        Keyword.merge(
+          config_with_attrs([]),
+          icons: ["arrow-left"],
+          rename: %{"arrow-right" => "forward"}
+        )
+
+      assert {:error, %NimbleOptions.ValidationError{} = error} =
+               validate_icon_sets(lucide: config)
+
+      assert Exception.message(error) =~
+               ~s(icon "arrow-right" is in :rename but not in :icons)
+    end
+
+    test "returns error if rename is not a map of strings" do
+      for {rename, message} <- [
+            {[{"arrow-left", "back"}], "expected a map of icon names"},
+            {%{"arrow-left" => :back},
+             "expected an icon name and a function name"},
+            {%{arrow_left: "back"}, "expected an icon name and a function name"}
+          ] do
+        assert {:error, %NimbleOptions.ValidationError{} = error} =
+                 validate_icon_sets(
+                   lucide: Keyword.put(config_with_attrs([]), :rename, rename)
+                 )
+
+        assert Exception.message(error) =~ message
+      end
+    end
+
     test "returns error if the module name is not a module" do
       for module_name <- [nil, true, :lowercase, "MyAppWeb.Components.Lucide"] do
         assert {:error, %NimbleOptions.ValidationError{} = error} =
