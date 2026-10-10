@@ -85,7 +85,7 @@ defmodule ExIcon.AttrsTest do
                 [{"stroke", [default: "currentColor"]}]}
     end
 
-    test "returns svg without attributes unchanged" do
+    test "only adds aria-hidden to an svg without attributes" do
       svg = """
       <svg>
         <path d="m12 19-7-7 7-7" />
