@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   tests_coverage:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     name: Test Coverage
     timeout-minutes: 15
     steps:
@@ -52,7 +52,7 @@ jobs:
         run: mix coveralls.github --warnings-as-errors
 
   tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     name: OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
     timeout-minutes: 15
     strategy:
@@ -92,7 +92,7 @@ jobs:
 
   matrix-results:
     if: ${{ always() }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     name: Tests
     timeout-minutes: 5
     needs:
@@ -103,7 +103,7 @@ jobs:
         run: exit 1
 
   code-quality:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     name: Code Quality
     timeout-minutes: 20
 
